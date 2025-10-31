@@ -246,7 +246,6 @@ export const countryNameMap: Record<string, string> = {
 	"Macao": "Macau",
 	"Martinique": "Martinique",
 	"Mayotte": "Mayotte",
-	"Montserrat": "Montserrat", // Bereits vorhanden
 	"Northern Mariana Islands": "Nördliche Marianen",
 	"Saint Barthélemy": "Saint-Barthélemy",
 	"Saint Martin": "Saint-Martin",
