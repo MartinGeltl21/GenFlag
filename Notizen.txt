@@ -1,0 +1,5 @@
+GenFlag Features:
+
+Sprache der Flaggen änderbar
+
+Multiplayer
