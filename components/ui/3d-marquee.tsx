@@ -18,7 +18,7 @@ export const ThreeDMarquee = ({
 	return (
 		<div
 			className={cn(
-				"block h-dvh w-full overflow-hidden max-sm:h-100",
+				"block h-dvh w-full overflow-hidden",
 				className,
 			)}
 		>

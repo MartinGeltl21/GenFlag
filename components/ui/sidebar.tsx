@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { IconMenu2, IconX } from "@tabler/icons-react";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 interface Links {
 	label: string;
@@ -116,7 +117,7 @@ export const MobileSidebar = ({
 		<>
 			<div
 				className={cn(
-					"h-10 px-4 py-4 flex flex-row md:hidden  items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full",
+					"h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-black/60 backdrop-blur-xl border-b border-white/10 w-full",
 				)}
 				{...props}
 			>

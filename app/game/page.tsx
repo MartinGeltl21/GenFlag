@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
+import { saveFlagResult } from "@/lib/stats";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
+import { AuthModal } from "@/components/auth/auth-modal";
 import Link from "next/link";
 import { motion } from "motion/react";
 
@@ -88,6 +90,9 @@ export default function GamePage() {
 
 		if (answer === correctAnswer) {
 			setScore((prev) => prev + 1);
+			saveFlagResult(currentCountry?.cca2 || "", true);
+		} else {
+			saveFlagResult(currentCountry?.cca2 || "", false);
 		}
 	};
 
@@ -97,7 +102,7 @@ export default function GamePage() {
 
 	const getButtonClassName = (option: string) => {
 		const base = "text-white font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 focus:outline-none transition-colors min-h-[56px] text-base";
-		
+
 		if (isAnswered && option === correctAnswer) {
 			// Knalliges Grün für korrekte Antwort
 			return cn(
@@ -145,7 +150,7 @@ export default function GamePage() {
 	];
 
 	return (
-		<div className="relative flex h-dvh w-full overflow-hidden dark:bg-black">
+		<div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden dark:bg-black">
 			{/* Grid and Dot Background von Aceternity UI */}
 			<GridBackground className="pointer-events-none absolute inset-0" />
 
@@ -169,7 +174,8 @@ export default function GamePage() {
 							))}
 						</div>
 					</div>
-					<div>
+					<div className="space-y-2">
+						<AuthModal />
 						<SidebarLink
 							link={{
 								label: "Zurück",

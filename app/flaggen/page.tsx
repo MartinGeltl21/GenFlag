@@ -9,6 +9,7 @@ import { getGermanName } from "@/lib/countryNames";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { motion } from "motion/react";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 interface Country {
 	name: { common: string; official: string };
@@ -65,7 +66,7 @@ export default function FlaggenPage() {
 					grouped[region].push(country);
 				});
 
-												// Sortieren: Innerhalb jedes Kontinents alphabetisch nach deutschen Namen
+				// Sortieren: Innerhalb jedes Kontinents alphabetisch nach deutschen Namen
 				Object.keys(grouped).forEach((key) => {
 					grouped[key].sort((a, b) => {
 						const nameA = getGermanName(a.name.common);
@@ -112,7 +113,7 @@ export default function FlaggenPage() {
 	];
 
 	return (
-		<div className="relative flex min-h-dvh w-full bg-black">
+		<div className="relative flex flex-col md:flex-row min-h-dvh w-full bg-black">
 			{/* Sidebar */}
 			<Sidebar>
 				<SidebarBody className="justify-between gap-10 bg-black/60 backdrop-blur-xl border-r border-white/10">
@@ -133,7 +134,8 @@ export default function FlaggenPage() {
 							))}
 						</div>
 					</div>
-					<div>
+					<div className="space-y-2">
+						<AuthModal />
 						<SidebarLink
 							link={{
 								label: "Zurück",
@@ -147,80 +149,80 @@ export default function FlaggenPage() {
 
 			{/* Main Content */}
 			<div className="relative z-12 flex flex-1 flex-col overflow-y-auto bg-black px-4 py-24 md:py-32">
-			<div
-				className={cn(
-					"pointer-events-none absolute inset-0 z-0 bg-black",
-					"[background-size:20px_20px]",
-					"[background-image:radial-gradient(#ffffff_1px,transparent_1px)]",
-				)}
-			/>
-			{/* Radial gradient for the container to give a faded look */}
-			<div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+				<div
+					className={cn(
+						"pointer-events-none absolute inset-0 z-0 bg-black",
+						"[background-size:20px_20px]",
+						"[background-image:radial-gradient(#ffffff_1px,transparent_1px)]",
+					)}
+				/>
+				{/* Radial gradient for the container to give a faded look */}
+				<div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
 
-			<div className="relative z-10 w-full max-w-7xl mx-auto">
-				<h1 className="text-4xl font-bold text-white mb-8 text-center">Alle Flaggen</h1>
+				<div className="relative z-10 w-full max-w-7xl mx-auto">
+					<h1 className="text-4xl font-bold text-white mb-8 text-center">Alle Flaggen</h1>
 
-				{loading ? (
-					<div className="text-center text-white">
-						<p>Lädt...</p>
-					</div>
-				) : (
-					<div className="space-y-12">
-						{continentOrder.map((continent) => {
-							const countriesInContinent = groupedByContinent[continent] || [];
-							if (countriesInContinent.length === 0) return null;
+					{loading ? (
+						<div className="text-center text-white">
+							<p>Lädt...</p>
+						</div>
+					) : (
+						<div className="space-y-12">
+							{continentOrder.map((continent) => {
+								const countriesInContinent = groupedByContinent[continent] || [];
+								if (countriesInContinent.length === 0) return null;
 
-							return (
-								<div key={continent} className="space-y-6">
-									<h2 className="text-2xl font-semibold text-white border-b border-white/20 pb-2">
-										{continentNames[continent] || continent}
-									</h2>
-									<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-										{countriesInContinent.map((country) => (
-											<Card
-												key={country.cca2}
-												className="bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/30 transition-colors"
-											>
-												<CardContent className="p-4 space-y-3">
-													<div className="aspect-[3/2] flex items-center justify-center">
-														{country.flags?.svg || country.flags?.png ? (
-															<img
-																src={country.flags.svg || country.flags.png}
-																alt={getGermanName(country.name.common)}
-																className="w-full h-full object-contain"
-															/>
-														) : (
-															<span className="text-white/50 text-xs">Keine Flagge</span>
-														)}
-													</div>
-													<h3 className="text-sm font-medium text-white text-center line-clamp-2">
-														{getGermanName(country.name.common)}
-													</h3>
-												</CardContent>
-											</Card>
-										))}
+								return (
+									<div key={continent} className="space-y-6">
+										<h2 className="text-2xl font-semibold text-white border-b border-white/20 pb-2">
+											{continentNames[continent] || continent}
+										</h2>
+										<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+											{countriesInContinent.map((country) => (
+												<Card
+													key={country.cca2}
+													className="bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/30 transition-colors"
+												>
+													<CardContent className="p-4 space-y-3">
+														<div className="aspect-[3/2] flex items-center justify-center">
+															{country.flags?.svg || country.flags?.png ? (
+																<img
+																	src={country.flags.svg || country.flags.png}
+																	alt={getGermanName(country.name.common)}
+																	className="w-full h-full object-contain"
+																/>
+															) : (
+																<span className="text-white/50 text-xs">Keine Flagge</span>
+															)}
+														</div>
+														<h3 className="text-sm font-medium text-white text-center line-clamp-2">
+															{getGermanName(country.name.common)}
+														</h3>
+													</CardContent>
+												</Card>
+											))}
+										</div>
 									</div>
-								</div>
-							);
-						})}
+								);
+							})}
+						</div>
+					)}
+				</div>
+
+				{/* Scroll-to-top Button */}
+				{showScrollToTop && (
+					<div className="fixed bottom-8 right-6 md:right-16 lg:right-24 xl:right-32 2xl:right-40 z-50">
+						<Button
+							variant="outline"
+							size="icon"
+							aria-label="Nach oben scrollen"
+							onClick={scrollToTop}
+							className="bg-black/90 border-white/30 hover:bg-black hover:border-white/50 backdrop-blur-md shadow-lg transition-all w-14 h-14"
+						>
+							<ArrowUp className="h-6 w-6 text-white" />
+						</Button>
 					</div>
 				)}
-			</div>
-
-			{/* Scroll-to-top Button */}
-			{showScrollToTop && (
-				<div className="fixed bottom-8 right-6 md:right-16 lg:right-24 xl:right-32 2xl:right-40 z-50">
-					<Button
-						variant="outline"
-						size="icon"
-						aria-label="Nach oben scrollen"
-						onClick={scrollToTop}
-						className="bg-black/90 border-white/30 hover:bg-black hover:border-white/50 backdrop-blur-md shadow-lg transition-all w-14 h-14"
-					>
-						<ArrowUp className="h-6 w-6 text-white" />
-					</Button>
-				</div>
-			)}
 			</div>
 		</div>
 	);
