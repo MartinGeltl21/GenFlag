@@ -21,7 +21,7 @@
     "lucide-react": "^0.548.0",
     "mini-svg-data-uri": "^1.4.4",
     "motion": "^11.18.2",
-    "next": "16.0.1",
+    "next": "16.0.10",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tailwind-merge": "^3.3.1"
