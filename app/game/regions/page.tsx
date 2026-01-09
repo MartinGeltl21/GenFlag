@@ -177,7 +177,7 @@ export default function RegionsPage() {
             <Sidebar>
                 <SidebarBody className="justify-between gap-10 bg-black/60 backdrop-blur-xl border-r border-white/10">
                     <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
-                        <div className="flex items-center space-x-2 py-2">
+                        <Link href="/" className="flex items-center space-x-2 py-2">
                             <div className="h-6 w-7 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-white" />
                             <motion.span
                                 initial={{ opacity: 0 }}
@@ -186,7 +186,7 @@ export default function RegionsPage() {
                             >
                                 GenFlag
                             </motion.span>
-                        </div>
+                        </Link>
                         <div className="mt-8 flex flex-col gap-3">
                             {sidebarLinks.map((link, idx) => (
                                 <SidebarLink key={idx} link={link} />

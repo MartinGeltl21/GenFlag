@@ -10,6 +10,7 @@ import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { AuthModal } from "@/components/auth/auth-modal";
+import Link from "next/link";
 
 interface Country {
 	name: { common: string; official: string };
@@ -118,7 +119,7 @@ export default function FlaggenPage() {
 			<Sidebar>
 				<SidebarBody className="justify-between gap-10 bg-black/60 backdrop-blur-xl border-r border-white/10">
 					<div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
-						<div className="flex items-center space-x-2 py-2">
+						<Link href="/" className="flex items-center space-x-2 py-2">
 							<div className="h-6 w-7 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-white" />
 							<motion.span
 								initial={{ opacity: 0 }}
@@ -127,7 +128,7 @@ export default function FlaggenPage() {
 							>
 								GenFlag
 							</motion.span>
-						</div>
+						</Link>
 						<div className="mt-8 flex flex-col gap-3">
 							{sidebarLinks.map((link, idx) => (
 								<SidebarLink key={idx} link={link} />
