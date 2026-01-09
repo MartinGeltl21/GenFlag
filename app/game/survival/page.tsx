@@ -10,6 +10,7 @@ import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, I
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { createClient } from "@/lib/supabase/client";
 
 interface Country {
     name: { common: string; official: string };
@@ -27,6 +28,8 @@ export default function SurvivalPage() {
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(3);
     const [gameOver, setGameOver] = useState(false);
+    const [rank, setRank] = useState<number | null>(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -96,8 +99,35 @@ export default function SurvivalPage() {
             setLives(newLives);
             if (newLives <= 0) {
                 setGameOver(true);
+                // Save highscore when game is over
+                saveHighscore(score + (answer === correctAnswer ? 1 : 0));
             }
         }
+    };
+
+    const saveHighscore = async (finalScore: number) => {
+        if (finalScore <= 0) return;
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setIsLoggedIn(false);
+            return;
+        }
+        setIsLoggedIn(true);
+
+        // Insert the new highscore
+        await supabase.from("highscores").insert({
+            user_id: user.id,
+            score: finalScore,
+        });
+
+        // Get the rank (count of scores higher than ours + 1)
+        const { count } = await supabase
+            .from("highscores")
+            .select("*", { count: "exact", head: true })
+            .gt("score", finalScore);
+
+        setRank((count ?? 0) + 1);
     };
 
     const handleNext = () => {
@@ -110,6 +140,7 @@ export default function SurvivalPage() {
         setLives(3);
         setScore(0);
         setGameOver(false);
+        setRank(null);
         setCurrentCountry(null);
         setTimeout(() => loadNewQuestion(), 0);
     };
@@ -213,16 +244,28 @@ export default function SurvivalPage() {
                                     <p className="text-2xl text-neutral-300">
                                         Dein Punktestand: <span className="text-green-400 font-bold">{score}</span>
                                     </p>
-                                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                    {rank !== null && (
+                                        <div className="flex items-center justify-center gap-2">
+                                            {rank <= 3 ? (
+                                                <span className="text-4xl">{rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}</span>
+                                            ) : (
+                                                <span className="text-2xl">🏅</span>
+                                            )}
+                                            <p className="text-xl text-amber-400">
+                                                Platz <span className="font-bold">{rank}</span> in der Bestenliste!
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                                         <button
                                             onClick={handleRestart}
-                                            className="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-lg px-8 py-4"
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
                                         >
                                             Nochmal spielen
                                         </button>
                                         <Link
                                             href="/game/modes"
-                                            className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-lg px-8 py-4"
+                                            className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
                                         >
                                             Zurück zur Auswahl
                                         </Link>
