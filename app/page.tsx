@@ -90,13 +90,6 @@ export default function Home() {
 					</div>
 					<div className="space-y-2">
 						<AuthModal />
-						<SidebarLink
-							link={{
-								label: "Zurück",
-								href: "/",
-								icon: <IconArrowLeft className="h-6 w-6 shrink-0 text-white" />,
-							}}
-						/>
 					</div>
 				</SidebarBody>
 			</Sidebar>
@@ -241,6 +234,6 @@ export default function Home() {
 					</div>
 				</section>
 			</div>
-		</div>
+		</div >
 	);
 }
