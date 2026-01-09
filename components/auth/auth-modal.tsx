@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { useSidebar } from "@/components/ui/sidebar";
 import Link from "next/link";
+import { AuthForm } from "@/components/auth/auth-form";
 
 export function AuthModal({ onLogin }: { onLogin?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -149,77 +150,9 @@ export function AuthModal({ onLogin }: { onLogin?: () => void }) {
                 </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10 text-white">
-                <DialogHeader>
-                    <DialogTitle>{isSignUp ? "Registrieren" : "Anmelden"}</DialogTitle>
-                    <DialogDescription className="text-zinc-400">
-                        Speichere deine Fortschritte und vergleiche deine Statistik.
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="flex flex-col gap-4 py-4">
-                    <Button
-                        variant="outline"
-                        onClick={() => handleOAuth("google")}
-                        className="w-full gap-2 border-white/10 bg-white/5 hover:bg-white/10 hover:text-white"
-                    >
-                        <IconBrandGoogle className="h-4 w-4" />
-                        Mit Google fortfahren
-                    </Button>
-
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-white/10" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-zinc-950 px-2 text-zinc-500">Oder mit E-Mail</span>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleAuth} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">E-Mail</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="name@example.com"
-                                className="bg-black/50 border-white/10"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Passwort</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="bg-black/50 border-white/10"
-                                required
-                                minLength={6}
-                            />
-                        </div>
-
-                        {error && <div className="text-red-400 text-sm">{error}</div>}
-                        {message && <div className="text-green-400 text-sm">{message}</div>}
-
-                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-                            {isLoading ? "Lädt..." : isSignUp ? "Registrieren" : "Anmelden"}
-                        </Button>
-                    </form>
-
-                    <div className="mt-2 text-center text-sm">
-                        <button
-                            type="button"
-                            onClick={() => setIsSignUp(!isSignUp)}
-                            className="text-zinc-400 hover:text-white underline underline-offset-4"
-                        >
-                            {isSignUp
-                                ? "Bereits einen Account? Anmelden"
-                                : "Noch keinen Account? Registrieren"}
-                        </button>
-                    </div>
+                {/* Wir rendern hier einfach die AuthForm, damit wir keine doppelte Logik haben */}
+                <div className="py-4">
+                    <AuthForm />
                 </div>
             </DialogContent>
         </Dialog>

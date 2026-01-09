@@ -75,13 +75,31 @@ export default function RegionsPage() {
         const randomCountry = list[Math.floor(Math.random() * list.length)];
 
         const wrongAnswers: string[] = [];
-        while (wrongAnswers.length < 3) {
+        let attempts = 0;
+        while (wrongAnswers.length < 3 && attempts < 200) {
+            attempts++;
             const randomIndex = Math.floor(Math.random() * list.length);
             const country = list[randomIndex];
             const germanName = getGermanName(country.name.common);
             const randomCountryGermanName = getGermanName(randomCountry.name.common);
             if (germanName !== randomCountryGermanName && !wrongAnswers.includes(germanName)) {
                 wrongAnswers.push(germanName);
+            }
+        }
+
+        // Fallback: Falls wir nicht genug falsche Antworten aus der Region finden (sehr unwahrscheinlich),
+        // bedienen wir uns an allen Ländern, um Crashs zu vermeiden.
+        if (wrongAnswers.length < 3) {
+            let globalAttempts = 0;
+            while (wrongAnswers.length < 3 && globalAttempts < 200) {
+                globalAttempts++;
+                const randomIndex = Math.floor(Math.random() * allCountries.length);
+                const country = allCountries[randomIndex];
+                const germanName = getGermanName(country.name.common);
+                const randomCountryGermanName = getGermanName(randomCountry.name.common);
+                if (germanName !== randomCountryGermanName && !wrongAnswers.includes(germanName)) {
+                    wrongAnswers.push(germanName);
+                }
             }
         }
 

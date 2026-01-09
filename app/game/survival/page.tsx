@@ -58,7 +58,9 @@ export default function SurvivalPage() {
         const randomCountry = countries[Math.floor(Math.random() * countries.length)];
 
         const wrongAnswers: string[] = [];
-        while (wrongAnswers.length < 3) {
+        let attempts = 0;
+        while (wrongAnswers.length < 3 && attempts < 200) {
+            attempts++;
             const randomIndex = Math.floor(Math.random() * countries.length);
             const country = countries[randomIndex];
             const germanName = getGermanName(country.name.common);

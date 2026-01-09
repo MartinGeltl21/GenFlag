@@ -59,7 +59,9 @@ export default function GamePage() {
 
 		// 3 weitere zufällige Länder für die falschen Antworten
 		const wrongAnswers: string[] = [];
-		while (wrongAnswers.length < 3) {
+		let attempts = 0;
+		while (wrongAnswers.length < 3 && attempts < 200) {
+			attempts++;
 			const randomIndex = Math.floor(Math.random() * countries.length);
 			const country = countries[randomIndex];
 			const germanName = getGermanName(country.name.common);
