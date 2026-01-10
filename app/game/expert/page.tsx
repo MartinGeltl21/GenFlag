@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
 import { saveFlagResult } from "@/lib/stats";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
+import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -25,9 +25,13 @@ export default function ExpertPage() {
     const [correctAnswer, setCorrectAnswer] = useState<string>("");
     const [isAnswered, setIsAnswered] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
+    const [isSkipped, setIsSkipped] = useState(false);
     const [score, setScore] = useState(0);
     const [total, setTotal] = useState(0);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+    const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Get all German country names for autocomplete
     const allGermanNames = useMemo(() => {
@@ -65,7 +69,12 @@ export default function ExpertPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [countries.length]);
 
-    const loadNewQuestion = () => {
+    // Reset selected index when suggestions change
+    useEffect(() => {
+        setSelectedIndex(-1);
+    }, [suggestions]);
+
+    const loadNewQuestion = useCallback(() => {
         if (countries.length === 0) return;
 
         const randomCountry = countries[Math.floor(Math.random() * countries.length)];
@@ -76,11 +85,36 @@ export default function ExpertPage() {
         setInputValue("");
         setIsAnswered(false);
         setIsCorrect(false);
+        setIsSkipped(false);
         setShowSuggestions(false);
+        setSelectedIndex(-1);
 
         // Focus input
         setTimeout(() => inputRef.current?.focus(), 100);
-    };
+    }, [countries]);
+
+    // Global Enter listener when answered (for manual skip to next question)
+    useEffect(() => {
+        const handleGlobalEnter = (e: KeyboardEvent) => {
+            if (isAnswered && e.key === "Enter") {
+                e.preventDefault();
+                // Clear the auto-advance timer
+                if (autoAdvanceTimerRef.current) {
+                    clearTimeout(autoAdvanceTimerRef.current);
+                    autoAdvanceTimerRef.current = null;
+                }
+                loadNewQuestion();
+            }
+        };
+
+        if (isAnswered) {
+            window.addEventListener("keydown", handleGlobalEnter);
+        }
+
+        return () => {
+            window.removeEventListener("keydown", handleGlobalEnter);
+        };
+    }, [isAnswered, loadNewQuestion]);
 
     const handleSubmit = (answer: string) => {
         if (isAnswered) return;
@@ -93,12 +127,31 @@ export default function ExpertPage() {
         setIsCorrect(correct);
         setTotal((prev) => prev + 1);
         setShowSuggestions(false);
+        setSelectedIndex(-1);
 
         if (correct) {
             setScore((prev) => prev + 1);
         }
 
         saveFlagResult(currentCountry?.cca2 || "", correct);
+
+        // Auto-advance to next question after 1 second
+        autoAdvanceTimerRef.current = setTimeout(() => {
+            loadNewQuestion();
+        }, 1000);
+    };
+
+    const handleSkip = () => {
+        if (isAnswered) return;
+
+        setIsAnswered(true);
+        setIsCorrect(false);
+        setIsSkipped(true);
+        setTotal((prev) => prev + 1);
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+
+        saveFlagResult(currentCountry?.cca2 || "", false);
     };
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -108,8 +161,38 @@ export default function ExpertPage() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && inputValue.trim()) {
-            handleSubmit(inputValue);
+        // Tab to autocomplete (only fills in the text, does not submit)
+        if (e.key === "Tab" && suggestions.length > 0) {
+            e.preventDefault();
+            const suggestionToUse = selectedIndex >= 0 ? suggestions[selectedIndex] : suggestions[0];
+            setInputValue(suggestionToUse);
+            setShowSuggestions(false);
+            setSelectedIndex(-1);
+            return;
+        }
+
+        // Navigation in suggestions
+        if (showSuggestions && suggestions.length > 0) {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setSelectedIndex((prev) =>
+                    prev < suggestions.length - 1 ? prev + 1 : 0
+                );
+                return;
+            }
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setSelectedIndex((prev) =>
+                    prev > 0 ? prev - 1 : suggestions.length - 1
+                );
+                return;
+            }
+        }
+
+        // Escape to skip
+        if (e.key === "Escape") {
+            e.preventDefault();
+            handleSkip();
         }
     };
 
@@ -212,6 +295,7 @@ export default function ExpertPage() {
                                             onChange={(e) => {
                                                 setInputValue(e.target.value);
                                                 setShowSuggestions(e.target.value.length >= 1);
+                                                setSelectedIndex(-1);
                                             }}
                                             onKeyDown={handleKeyDown}
                                             onFocus={() => setShowSuggestions(inputValue.length >= 1)}
@@ -227,20 +311,34 @@ export default function ExpertPage() {
                                                         : "border-white/20 focus:border-purple-500"
                                             )}
                                         />
-                                        {!isAnswered && inputValue.trim() && (
-                                            <button
-                                                onClick={() => handleSubmit(inputValue)}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-                                            >
-                                                Prüfen
-                                            </button>
+                                        {!isAnswered && (
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                {inputValue.trim() && (
+                                                    <button
+                                                        onClick={() => handleSubmit(inputValue)}
+                                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                                                    >
+                                                        Prüfen
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={handleSkip}
+                                                    className="px-3 h-[42px] bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
+                                                    title="Überspringen (ESC)"
+                                                >
+                                                    <IconPlayerSkipForward className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
+
+
 
                                     {/* Suggestions Dropdown */}
                                     <AnimatePresence>
                                         {showSuggestions && suggestions.length > 0 && !isAnswered && (
                                             <motion.div
+                                                ref={suggestionsRef}
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -10 }}
@@ -250,7 +348,13 @@ export default function ExpertPage() {
                                                     <button
                                                         key={index}
                                                         onMouseDown={() => handleSuggestionClick(suggestion)}
-                                                        className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0"
+                                                        onMouseEnter={() => setSelectedIndex(index)}
+                                                        className={cn(
+                                                            "w-full px-4 py-3 text-left text-white transition-colors border-b border-white/5 last:border-b-0",
+                                                            selectedIndex === index
+                                                                ? "bg-purple-600/30 text-purple-200"
+                                                                : "hover:bg-white/10"
+                                                        )}
                                                     >
                                                         {suggestion}
                                                     </button>
@@ -270,6 +374,11 @@ export default function ExpertPage() {
                                         >
                                             {isCorrect ? (
                                                 <p className="text-2xl font-bold text-green-400">✓ Richtig!</p>
+                                            ) : isSkipped ? (
+                                                <p className="text-xl text-amber-400">
+                                                    ⏭ Übersprungen! Es war:{" "}
+                                                    <span className="font-bold text-white">{correctAnswer}</span>
+                                                </p>
                                             ) : (
                                                 <p className="text-xl text-red-400">
                                                     ✗ Falsch! Richtig war:{" "}
@@ -288,7 +397,7 @@ export default function ExpertPage() {
                                             onClick={handleNext}
                                             className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
                                         >
-                                            Weiter
+                                            Weiter (Enter)
                                         </button>
                                     )}
                                 </div>

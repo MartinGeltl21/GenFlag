@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowUp } from "lucide-react";
@@ -34,18 +34,22 @@ export default function FlaggenPage() {
 	const [groupedByContinent, setGroupedByContinent] = useState<Record<string, Country[]>>({});
 	const [loading, setLoading] = useState(true);
 	const [showScrollToTop, setShowScrollToTop] = useState(false);
+	const contentRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
+		const container = contentRef.current;
+		if (!container) return;
+
 		const handleScroll = () => {
-			setShowScrollToTop(window.scrollY > 300);
+			setShowScrollToTop(container.scrollTop > 300);
 		};
 
-		window.addEventListener("scroll", handleScroll);
-		return () => window.removeEventListener("scroll", handleScroll);
+		container.addEventListener("scroll", handleScroll);
+		return () => container.removeEventListener("scroll", handleScroll);
 	}, []);
 
 	const scrollToTop = () => {
-		window.scrollTo({ top: 0, behavior: "smooth" });
+		contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 	};
 
 	useEffect(() => {
@@ -149,7 +153,7 @@ export default function FlaggenPage() {
 			</Sidebar>
 
 			{/* Main Content */}
-			<div className="relative z-12 flex flex-1 flex-col overflow-y-auto bg-black px-4 py-24 md:py-32">
+			<div ref={contentRef} className="relative z-12 flex flex-1 flex-col overflow-y-auto bg-black px-4 py-24 md:py-32">
 				<div
 					className={cn(
 						"pointer-events-none absolute inset-0 z-0 bg-black",

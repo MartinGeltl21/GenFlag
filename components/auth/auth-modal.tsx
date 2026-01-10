@@ -152,7 +152,10 @@ export function AuthModal({ onLogin }: { onLogin?: () => void }) {
             <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10 text-white">
                 {/* Wir rendern hier einfach die AuthForm, damit wir keine doppelte Logik haben */}
                 <div className="py-4">
-                    <AuthForm />
+                    <AuthForm onSuccess={() => {
+                        setIsOpen(false);
+                        if (onLogin) onLogin();
+                    }} />
                 </div>
             </DialogContent>
         </Dialog>

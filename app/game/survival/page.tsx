@@ -115,16 +115,18 @@ export default function SurvivalPage() {
         }
         setIsLoggedIn(true);
 
-        // Insert the new highscore
+        // Insert the new highscore with game_mode
         await supabase.from("highscores").insert({
             user_id: user.id,
             score: finalScore,
+            game_mode: "survival",
         });
 
-        // Get the rank (count of scores higher than ours + 1)
+        // Get the rank (count of scores higher than ours + 1) for this game mode
         const { count } = await supabase
             .from("highscores")
             .select("*", { count: "exact", head: true })
+            .eq("game_mode", "survival")
             .gt("score", finalScore);
 
         setRank((count ?? 0) + 1);

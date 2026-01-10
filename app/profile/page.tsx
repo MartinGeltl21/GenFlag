@@ -145,7 +145,7 @@ export default function ProfilePage() {
         .slice(0, 5);
 
     const worstFlags = [...stats]
-        .filter(s => s.times_correct + s.times_wrong >= 3)
+        .filter(s => s.times_correct + s.times_wrong >= 3 && s.times_wrong > 0) // Min 3 tries AND at least 1 error
         .sort((a, b) => (a.times_correct / (a.times_correct + a.times_wrong)) - (b.times_correct / (b.times_correct + b.times_wrong)))
         .slice(0, 5);
 
@@ -196,52 +196,53 @@ export default function ProfilePage() {
                                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Dein Profil</h1>
                                 <p className="text-zinc-400 text-lg">Verfolge deinen Fortschritt und verbessere dein Wissen.</p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                {isEditingUsername ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative">
+                                            {updateError && (
+                                                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-red-400 whitespace-nowrap">
+                                                    {updateError}
+                                                </span>
+                                            )}
+                                            <input
+                                                value={newUsername}
+                                                onChange={(e) => setNewUsername(e.target.value)}
+                                                className="bg-black/40 border border-white/20 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 w-40"
+                                                autoFocus
+                                                onKeyDown={(e) => e.key === "Enter" && handleUpdateUsername()}
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={handleUpdateUsername}
+                                            disabled={isUpdating}
+                                            className="p-2 hover:bg-white/10 rounded-full text-green-400 transition-colors"
+                                        >
+                                            <IconCheck size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => { setIsEditingUsername(false); setUpdateError(null); }}
+                                            className="p-2 hover:bg-white/10 rounded-full text-red-400 transition-colors"
+                                        >
+                                            <IconX size={18} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div
+                                        onClick={() => { setIsEditingUsername(true); setUpdateError(null); }}
+                                        className="group cursor-pointer relative min-w-[140px] px-5 py-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-zinc-300 text-sm flex justify-center items-center transition-all"
+                                    >
+                                        <span>{username}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 opacity-50 group-hover:opacity-100 transition-opacity"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </div>
+                                )}
                                 <Link
                                     href="/highscore"
-                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-full text-white text-sm font-medium transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40"
+                                    className="flex items-center justify-center gap-2 min-w-[140px] px-5 py-2 bg-zinc-800/80 hover:bg-zinc-700/80 border border-white/10 hover:border-amber-500/30 rounded-full text-zinc-300 hover:text-amber-400 text-sm font-medium transition-all"
                                 >
                                     <IconTrophy className="w-4 h-4" />
-                                    <span>Highscores</span>
+                                    <span>Bestenliste</span>
                                 </Link>
-                                <div className="flex flex-col items-end gap-2">
-                                    {isEditingUsername ? (
-                                        <div className="flex flex-col items-end gap-1">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    value={newUsername}
-                                                    onChange={(e) => setNewUsername(e.target.value)}
-                                                    className="bg-black/40 border border-white/20 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:border-blue-500 w-40"
-                                                    autoFocus
-                                                    onKeyDown={(e) => e.key === "Enter" && handleUpdateUsername()}
-                                                />
-                                                <button
-                                                    onClick={handleUpdateUsername}
-                                                    disabled={isUpdating}
-                                                    className="p-1 hover:bg-white/10 rounded-md text-green-400 transition-colors"
-                                                >
-                                                    <IconCheck size={20} />
-                                                </button>
-                                                <button
-                                                    onClick={() => { setIsEditingUsername(false); setUpdateError(null); }}
-                                                    className="p-1 hover:bg-white/10 rounded-md text-red-400 transition-colors"
-                                                >
-                                                    <IconX size={20} />
-                                                </button>
-                                            </div>
-                                            {updateError && <span className="text-[10px] text-red-400 mr-2">{updateError}</span>}
-                                        </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => { setIsEditingUsername(true); setUpdateError(null); }}
-                                            className="group cursor-pointer relative min-w-[160px] px-8 py-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-zinc-300 text-sm flex justify-center items-center transition-all"
-                                        >
-                                            <span>{username || user.email}</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                                        </div>
-                                    )}
-                                    <span className="text-[10px] text-zinc-600 mr-2">{user.email}</span>
-                                </div>
                             </div>
                         </div>
                     )}

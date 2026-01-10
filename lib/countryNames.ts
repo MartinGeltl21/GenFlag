@@ -48,6 +48,7 @@ export const countryNameMap: Record<string, string> = {
 	"Costa Rica": "Costa Rica",
 	"Croatia": "Kroatien",
 	"Cuba": "Kuba",
+	"Côte d'Ivoire": "Elfenbeinküste",
 	"Cyprus": "Zypern",
 	"Czechia": "Tschechien",
 	"Denmark": "Dänemark",
@@ -224,7 +225,7 @@ export const countryNameMap: Record<string, string> = {
 	"Yemen": "Jemen",
 	"Zambia": "Sambia",
 	"Zimbabwe": "Simbabwe",
-	
+
 	// Fehlende Länder/Territorien hinzufügen:
 	"Åland Islands": "Åland",
 	"American Samoa": "Amerikanisch-Samoa",

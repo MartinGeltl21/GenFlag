@@ -9,7 +9,7 @@ import { IconBrandGoogle } from "@tabler/icons-react";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export function AuthForm() {
+export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [username, setUsername] = useState("");
@@ -71,6 +71,7 @@ export function AuthForm() {
                 });
                 if (error) throw error;
                 router.refresh();
+                if (onSuccess) onSuccess();
             }
         } catch (e: any) {
             setError(e.message);
