@@ -257,7 +257,7 @@ export default function ProfilePage() {
                             <div className="text-xl animate-pulse">Lade Statistiken...</div>
                         </div>
                     ) : !user ? (
-                        <div className="flex flex-col items-center justify-center py-16 px-8 bg-zinc-900/50 rounded-3xl border border-white/5 backdrop-blur-sm">
+                        <div className="flex flex-col items-center py-16 px-8 bg-zinc-900/50 rounded-3xl border border-white/5 backdrop-blur-sm w-full max-w-lg mx-auto min-h-[520px]">
                             <AuthForm />
                         </div>
                     ) : (

@@ -15,6 +15,7 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
     const [username, setUsername] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSignUp, setIsSignUp] = useState(false);
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
@@ -80,6 +81,25 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
         }
     };
 
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        setMessage(null);
+
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${location.origin}/auth/reset-password`,
+            });
+            if (error) throw error;
+            setMessage("Wir haben dir einen Link zum Zurücksetzen deines Passworts per E-Mail gesendet.");
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleOAuth = async (provider: "google" | "github") => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider,
@@ -91,41 +111,44 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     return (
-        <div className="w-full max-w-md mx-auto">
+        <div className="w-full max-w-md mx-auto min-h-[450px]">
             <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-white mb-2">
-                    {isSignUp ? "Registrieren" : "Anmelden"}
+                    {isForgotPassword ? "Passwort zurücksetzen" : isSignUp ? "Registrieren" : "Anmelden"}
                 </h2>
                 <p className="text-zinc-400">
-                    Speichere deine Fortschritte und vergleiche deine Statistik.
+                    {isForgotPassword
+                        ? "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen."
+                        : "Speichere deine Fortschritte und vergleiche deine Statistik."}
                 </p>
             </div>
 
             <div className="flex flex-col gap-5">
-                {!isSignUp && (
+                {/* Google button - hidden in signup/forgot modes */}
+                <div className={`transition-all duration-300 ease-out ${isSignUp || isForgotPassword ? 'h-0 overflow-hidden opacity-0' : 'opacity-100'}`}>
                     <Button
                         variant="outline"
                         onClick={() => handleOAuth("google")}
                         className="w-full gap-3 py-6 text-base border-white/20 bg-white/10 text-zinc-400 hover:text-white hover:bg-white/15 hover:border-white/30 transition-colors"
+                        tabIndex={isSignUp || isForgotPassword ? -1 : 0}
                     >
                         <IconBrandGoogle className="h-5 w-5" />
                         Mit Google fortfahren
                     </Button>
-                )}
+                </div>
 
-                {!isSignUp && (
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-white/10" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-zinc-950 px-4 text-zinc-500">Oder mit E-Mail</span>
-                        </div>
+                {/* Divider - hidden in signup/forgot modes */}
+                <div className={`relative transition-all duration-300 ease-out ${isSignUp || isForgotPassword ? 'h-0 overflow-hidden opacity-0' : 'h-4 opacity-100'}`}>
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-white/10" />
                     </div>
-                )}
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-zinc-950 px-4 text-zinc-500">Oder mit E-Mail</span>
+                    </div>
+                </div>
 
-                <form onSubmit={handleAuth} className="space-y-5">
-                    {isSignUp && (
+                <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth} className="space-y-5">
+                    {isSignUp && !isForgotPassword && (
                         <div className="space-y-2">
                             <Label htmlFor="username" className="text-zinc-300">Benutzername</Label>
                             <Input
@@ -153,7 +176,8 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
                             required
                         />
                     </div>
-                    <div className="space-y-2">
+                    {/* Password field - hidden in forgot mode */}
+                    <div className={`space-y-2 transition-all duration-300 ease-out ${isForgotPassword ? 'h-0 overflow-hidden opacity-0' : 'opacity-100'}`}>
                         <Label htmlFor="password" className="text-zinc-300">Passwort</Label>
                         <div className="relative">
                             <Input
@@ -162,13 +186,15 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="py-6 pr-12 bg-zinc-900/50 border-white/10 text-white"
-                                required
+                                required={!isForgotPassword}
                                 minLength={6}
+                                tabIndex={isForgotPassword ? -1 : 0}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                                tabIndex={isForgotPassword ? -1 : 0}
                             >
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
@@ -179,14 +205,29 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
                     {message && <div className="text-green-400 text-sm p-3 bg-green-500/10 rounded-lg border border-green-500/20">{message}</div>}
 
                     <Button type="submit" className="w-full py-6 text-base bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-                        {isLoading ? "Lädt..." : isSignUp ? "Registrieren" : "Anmelden"}
+                        {isLoading ? "Lädt..." : isForgotPassword ? "Reset-Link senden" : isSignUp ? "Registrieren" : "Anmelden"}
                     </Button>
                 </form>
+
+                {!isSignUp && !isForgotPassword && (
+                    <div className="mt-4 text-center text-sm">
+                        <button
+                            type="button"
+                            onClick={() => setIsForgotPassword(true)}
+                            className="text-zinc-400 hover:text-white underline underline-offset-4 transition-colors"
+                        >
+                            Passwort vergessen?
+                        </button>
+                    </div>
+                )}
 
                 <div className="mt-4 text-center text-sm">
                     <button
                         type="button"
-                        onClick={() => setIsSignUp(!isSignUp)}
+                        onClick={() => {
+                            setIsSignUp(!isSignUp);
+                            setIsForgotPassword(false);
+                        }}
                         className="text-zinc-400 hover:text-white underline underline-offset-4 transition-colors"
                     >
                         {isSignUp
@@ -194,6 +235,18 @@ export function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
                             : "Noch keinen Account? Registrieren"}
                     </button>
                 </div>
+
+                {isForgotPassword && (
+                    <div className="mt-2 text-center text-sm">
+                        <button
+                            type="button"
+                            onClick={() => setIsForgotPassword(false)}
+                            className="text-zinc-400 hover:text-white underline underline-offset-4 transition-colors"
+                        >
+                            Zurück zur Anmeldung
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
