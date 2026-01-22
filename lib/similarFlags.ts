@@ -12,8 +12,8 @@ export const similarFlagGroups: string[][] = [
     // Tricolor vertical blue-yellow-red (nearly identical, slight shade differences)
     ["Romania", "Chad"],
 
-    // Horizontal white-red bicolor (reversed Indonesia/Monaco)
-    ["Poland", "Indonesia", "Monaco"], // Poland is white-red (reversed), but we exclude for safety
+    // Norwegian flag (identical)
+    ["Norway", "Bouvet Island"],
 
     // Note: We're being conservative here. Only truly identical flags are grouped.
 ];
