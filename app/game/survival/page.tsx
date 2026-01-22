@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
+import { FlagHistory } from "@/lib/flagHistory";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -31,6 +32,7 @@ export default function SurvivalPage() {
     const [gameOver, setGameOver] = useState(false);
     const [rank, setRank] = useState<number | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const flagHistory = useRef(new FlagHistory(40));
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -59,7 +61,19 @@ export default function SurvivalPage() {
     const loadNewQuestion = () => {
         if (countries.length === 0) return;
 
-        const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+        // Filter countries to exclude those in recent history
+        const availableCountries = countries.filter((c: Country) => flagHistory.current.canShowFlag(c.cca2));
+
+        // If we've exhausted all countries, reset history
+        if (availableCountries.length === 0) {
+            flagHistory.current.reset();
+            return loadNewQuestion();
+        }
+
+        const randomCountry = availableCountries[Math.floor(Math.random() * availableCountries.length)];
+
+        // Add to history
+        flagHistory.current.addFlag(randomCountry.cca2);
 
         const wrongAnswers: string[] = [];
         const similarToCorrect = getSimilarFlags(randomCountry.name.common);
@@ -151,6 +165,7 @@ export default function SurvivalPage() {
         setGameOver(false);
         setRank(null);
         setCurrentCountry(null);
+        flagHistory.current.reset(); // Reset flag history on game restart
         setTimeout(() => loadNewQuestion(), 0);
     };
 

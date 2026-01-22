@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
+import { FlagHistory } from "@/lib/flagHistory";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -27,6 +28,7 @@ export default function GamePage() {
 	const [isAnswered, setIsAnswered] = useState(false);
 	const [score, setScore] = useState(0);
 	const [total, setTotal] = useState(0);
+	const flagHistory = useRef(new FlagHistory(40));
 
 	useEffect(() => {
 		const fetchCountries = async () => {
@@ -55,8 +57,20 @@ export default function GamePage() {
 	const loadNewQuestion = () => {
 		if (countries.length === 0) return;
 
-		// Zufälliges Land auswählen
-		const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+		// Filter countries to exclude those in recent history
+		const availableCountries = countries.filter((c: Country) => flagHistory.current.canShowFlag(c.cca2));
+
+		// If we've exhausted all countries, reset history
+		if (availableCountries.length === 0) {
+			flagHistory.current.reset();
+			return loadNewQuestion();
+		}
+
+		// Zufälliges Land auswählen (aus verfügbaren Ländern)
+		const randomCountry = availableCountries[Math.floor(Math.random() * availableCountries.length)];
+
+		// Add to history
+		flagHistory.current.addFlag(randomCountry.cca2);
 
 		// 3 weitere zufällige Länder für die falschen Antworten
 		const wrongAnswers: string[] = [];
