@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
+import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
@@ -75,6 +76,7 @@ export default function RegionsPage() {
         const randomCountry = list[Math.floor(Math.random() * list.length)];
 
         const wrongAnswers: string[] = [];
+        const similarToCorrect = getSimilarFlags(randomCountry.name.common);
         let attempts = 0;
         while (wrongAnswers.length < 3 && attempts < 200) {
             attempts++;
@@ -82,7 +84,12 @@ export default function RegionsPage() {
             const country = list[randomIndex];
             const germanName = getGermanName(country.name.common);
             const randomCountryGermanName = getGermanName(randomCountry.name.common);
-            if (germanName !== randomCountryGermanName && !wrongAnswers.includes(germanName)) {
+
+            if (
+                germanName !== randomCountryGermanName &&
+                !wrongAnswers.includes(germanName) &&
+                !similarToCorrect.includes(country.name.common)
+            ) {
                 wrongAnswers.push(germanName);
             }
         }
@@ -97,7 +104,12 @@ export default function RegionsPage() {
                 const country = allCountries[randomIndex];
                 const germanName = getGermanName(country.name.common);
                 const randomCountryGermanName = getGermanName(randomCountry.name.common);
-                if (germanName !== randomCountryGermanName && !wrongAnswers.includes(germanName)) {
+
+                if (
+                    germanName !== randomCountryGermanName &&
+                    !wrongAnswers.includes(germanName) &&
+                    !similarToCorrect.includes(country.name.common)
+                ) {
                     wrongAnswers.push(germanName);
                 }
             }

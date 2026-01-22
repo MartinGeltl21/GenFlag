@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
+import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward } from "@tabler/icons-react";
@@ -120,8 +121,12 @@ export default function ExpertPage() {
         if (isAnswered) return;
 
         const normalizedAnswer = answer.trim().toLowerCase();
-        const normalizedCorrect = correctAnswer.toLowerCase();
-        const correct = normalizedAnswer === normalizedCorrect;
+
+        // Alle als korrekt geltenden (ähnlichen) Ländernamen in Deutsch holen
+        const similarNames = getSimilarFlags(currentCountry?.name.common || "").map(getGermanName);
+        const allCorrectAnswers = [correctAnswer, ...similarNames].map(name => name.toLowerCase());
+
+        const correct = allCorrectAnswers.includes(normalizedAnswer);
 
         setIsAnswered(true);
         setIsCorrect(correct);
