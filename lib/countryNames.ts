@@ -252,6 +252,14 @@ export const countryNameMap: Record<string, string> = {
 	"Saint Martin": "Saint-Martin",
 	"Svalbard and Jan Mayen": "Svalbard und Jan Mayen",
 	"United States Minor Outlying Islands": "Amerikanische Außengebiete im Pazifik", // Bereits vorhanden
+	// Updated/Added mappings to match API common names
+	"British Virgin Islands": "Britische Jungferninseln",
+	"Cape Verde": "Kap Verde",
+	"Heard Island and McDonald Islands": "Heard und McDonaldinseln",
+	"Ivory Coast": "Elfenbeinküste",
+	"Republic of the Congo": "Republik Kongo",
+	"South Georgia": "Südgeorgien und die Südlichen Sandwichinseln",
+	"United States Virgin Islands": "Amerikanische Jungferninseln",
 };
 
 // Hilfsfunktion zum Abrufen des deutschen Namens
