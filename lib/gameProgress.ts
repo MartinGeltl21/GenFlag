@@ -22,10 +22,13 @@ export async function saveGameProgress(gameMode: GameMode, state: Omit<GameProgr
         savedAt: new Date().toISOString(),
     };
 
+    console.log('🔵 Saving game progress:', gameMode, progressWithTimestamp);
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
+        console.log('🔵 User logged in, saving to Supabase');
         // Save to Supabase for logged-in users
         const { error } = await supabase
             .from("game_progress")
@@ -39,11 +42,14 @@ export async function saveGameProgress(gameMode: GameMode, state: Omit<GameProgr
             });
 
         if (error) {
-            console.error("Error saving progress to Supabase:", error);
+            console.error("❌ Error saving progress to Supabase:", error);
             // Fallback to LocalStorage
             saveToLocalStorage(gameMode, progressWithTimestamp);
+        } else {
+            console.log('✅ Progress saved to Supabase successfully');
         }
     } else {
+        console.log('🔵 No user logged in, saving to LocalStorage');
         // Use LocalStorage for non-logged-in users
         saveToLocalStorage(gameMode, progressWithTimestamp);
     }
@@ -53,10 +59,13 @@ export async function saveGameProgress(gameMode: GameMode, state: Omit<GameProgr
  * Load game progress
  */
 export async function loadGameProgress(gameMode: GameMode): Promise<GameProgress | null> {
+    console.log('🔍 Loading game progress for:', gameMode);
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
+        console.log('🔍 User logged in, loading from Supabase');
         // Try Supabase first
         const { data, error } = await supabase
             .from("game_progress")
@@ -66,12 +75,19 @@ export async function loadGameProgress(gameMode: GameMode): Promise<GameProgress
             .single();
 
         if (!error && data?.state) {
+            console.log('✅ Progress loaded from Supabase:', data.state);
             return data.state as GameProgress;
+        } else {
+            console.log('⚠️ No progress found in Supabase:', error?.message || 'No data');
         }
+    } else {
+        console.log('🔍 No user logged in, loading from LocalStorage');
     }
 
     // Fallback to LocalStorage
-    return loadFromLocalStorage(gameMode);
+    const localData = loadFromLocalStorage(gameMode);
+    console.log('LocalStorage data:', localData);
+    return localData;
 }
 
 /**
