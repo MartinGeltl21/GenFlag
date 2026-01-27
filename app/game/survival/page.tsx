@@ -7,6 +7,7 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
+import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -32,7 +33,10 @@ export default function SurvivalPage() {
     const [gameOver, setGameOver] = useState(false);
     const [rank, setRank] = useState<number | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [showResumeDialog, setShowResumeDialog] = useState(false);
+    const [savedProgress, setSavedProgress] = useState<{ score: number; lives: number } | null>(null);
     const flagHistory = useRef(new FlagHistory(40));
+    const hasCheckedProgress = useRef(false);
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -51,12 +55,30 @@ export default function SurvivalPage() {
         fetchCountries();
     }, []);
 
+    // Check for saved progress on mount
     useEffect(() => {
-        if (countries.length > 0 && !currentCountry && !gameOver) {
+        const checkProgress = async () => {
+            if (hasCheckedProgress.current) return;
+            hasCheckedProgress.current = true;
+
+            const progress = await loadGameProgress("survival");
+            if (progress && progress.score > 0 && progress.lives && progress.lives > 0) {
+                setSavedProgress({ score: progress.score, lives: progress.lives });
+                setShowResumeDialog(true);
+                if (progress.flagHistory) {
+                    progress.flagHistory.forEach(code => flagHistory.current.addFlag(code));
+                }
+            }
+        };
+        checkProgress();
+    }, []);
+
+    useEffect(() => {
+        if (countries.length > 0 && !currentCountry && !gameOver && !showResumeDialog) {
             loadNewQuestion();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [countries.length]);
+    }, [countries.length, showResumeDialog]);
 
     const loadNewQuestion = () => {
         if (countries.length === 0) return;
@@ -105,23 +127,37 @@ export default function SurvivalPage() {
         setIsAnswered(false);
     };
 
-    const handleAnswer = (answer: string) => {
+    const handleAnswer = async (answer: string) => {
         if (isAnswered || gameOver) return;
 
         setSelectedAnswer(answer);
         setIsAnswered(true);
 
         if (answer === correctAnswer) {
-            setScore((prev) => prev + 1);
+            const newScore = score + 1;
+            setScore(newScore);
             saveFlagResult(currentCountry?.cca2 || "", true);
+            // Save progress after each correct answer
+            await saveGameProgress("survival", {
+                score: newScore,
+                lives,
+                flagHistory: flagHistory.current.getHistory(),
+            });
         } else {
             saveFlagResult(currentCountry?.cca2 || "", false);
             const newLives = lives - 1;
             setLives(newLives);
             if (newLives <= 0) {
                 setGameOver(true);
-                // Save highscore when game is over
+                await clearGameProgress("survival");
                 saveHighscore(score + (answer === correctAnswer ? 1 : 0));
+            } else {
+                // Save progress with reduced lives
+                await saveGameProgress("survival", {
+                    score,
+                    lives: newLives,
+                    flagHistory: flagHistory.current.getHistory(),
+                });
             }
         }
     };
@@ -165,8 +201,25 @@ export default function SurvivalPage() {
         setGameOver(false);
         setRank(null);
         setCurrentCountry(null);
-        flagHistory.current.reset(); // Reset flag history on game restart
+        flagHistory.current.reset();
+        clearGameProgress("survival");
         setTimeout(() => loadNewQuestion(), 0);
+    };
+
+    const handleResume = () => {
+        if (savedProgress) {
+            setScore(savedProgress.score);
+            setLives(savedProgress.lives);
+        }
+        setShowResumeDialog(false);
+        loadNewQuestion();
+    };
+
+    const handleNewGame = () => {
+        clearGameProgress("survival");
+        flagHistory.current.reset();
+        setShowResumeDialog(false);
+        loadNewQuestion();
     };
 
     const getButtonClassName = (option: string) => {
@@ -255,7 +308,37 @@ export default function SurvivalPage() {
                 <div className="w-full max-w-6xl mx-auto">
                     <div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl pb-24">
                         <AnimatePresence mode="wait">
-                            {gameOver ? (
+                            {showResumeDialog ? (
+                                <motion.div
+                                    key="resume"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="text-center space-y-8"
+                                >
+                                    <div className="text-6xl mb-4">💾</div>
+                                    <h2 className="text-3xl font-bold text-white">Spielstand gefunden!</h2>
+                                    <p className="text-xl text-neutral-300">
+                                        Du hast einen Spielstand mit{" "}
+                                        <span className="text-green-400 font-bold">{savedProgress?.score}</span> Punkten und{" "}
+                                        <span className="text-red-400 font-bold">{savedProgress?.lives}</span> Leben.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                        <button
+                                            onClick={handleResume}
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
+                                        >
+                                            Fortsetzen
+                                        </button>
+                                        <button
+                                            onClick={handleNewGame}
+                                            className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
+                                        >
+                                            Neues Spiel
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ) : gameOver ? (
                                 <motion.div
                                     key="gameover"
                                     initial={{ opacity: 0, scale: 0.9 }}

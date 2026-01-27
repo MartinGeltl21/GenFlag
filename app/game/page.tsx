@@ -7,11 +7,12 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
+import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { AuthModal } from "@/components/auth/auth-modal";
 import Link from "next/link";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface Country {
 	name: { common: string; official: string };
@@ -28,7 +29,10 @@ export default function GamePage() {
 	const [isAnswered, setIsAnswered] = useState(false);
 	const [score, setScore] = useState(0);
 	const [total, setTotal] = useState(0);
+	const [showResumeDialog, setShowResumeDialog] = useState(false);
+	const [savedProgress, setSavedProgress] = useState<{ score: number; total: number } | null>(null);
 	const flagHistory = useRef(new FlagHistory(40));
+	const hasCheckedProgress = useRef(false);
 
 	useEffect(() => {
 		const fetchCountries = async () => {
@@ -47,12 +51,30 @@ export default function GamePage() {
 		fetchCountries();
 	}, []);
 
+	// Check for saved progress on mount
 	useEffect(() => {
-		if (countries.length > 0 && !currentCountry) {
+		const checkProgress = async () => {
+			if (hasCheckedProgress.current) return;
+			hasCheckedProgress.current = true;
+
+			const progress = await loadGameProgress("classic");
+			if (progress && progress.score > 0) {
+				setSavedProgress({ score: progress.score, total: progress.total || progress.score });
+				setShowResumeDialog(true);
+				if (progress.flagHistory) {
+					progress.flagHistory.forEach(code => flagHistory.current.addFlag(code));
+				}
+			}
+		};
+		checkProgress();
+	}, []);
+
+	useEffect(() => {
+		if (countries.length > 0 && !currentCountry && !showResumeDialog) {
 			loadNewQuestion();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [countries.length]);
+	}, [countries.length, showResumeDialog]);
 
 	const loadNewQuestion = () => {
 		if (countries.length === 0) return;
@@ -105,22 +127,50 @@ export default function GamePage() {
 		setIsAnswered(false);
 	};
 
-	const handleAnswer = (answer: string) => {
+	const handleAnswer = async (answer: string) => {
 		if (isAnswered) return;
 
 		setSelectedAnswer(answer);
 		setIsAnswered(true);
-		setTotal((prev) => prev + 1);
+		const newTotal = total + 1;
+		setTotal(newTotal);
 
 		if (answer === correctAnswer) {
-			setScore((prev) => prev + 1);
+			const newScore = score + 1;
+			setScore(newScore);
 			saveFlagResult(currentCountry?.cca2 || "", true);
+			await saveGameProgress("classic", {
+				score: newScore,
+				total: newTotal,
+				flagHistory: flagHistory.current.getHistory(),
+			});
 		} else {
 			saveFlagResult(currentCountry?.cca2 || "", false);
+			await saveGameProgress("classic", {
+				score,
+				total: newTotal,
+				flagHistory: flagHistory.current.getHistory(),
+			});
 		}
 	};
 
 	const handleNext = () => {
+		loadNewQuestion();
+	};
+
+	const handleResume = () => {
+		if (savedProgress) {
+			setScore(savedProgress.score);
+			setTotal(savedProgress.total);
+		}
+		setShowResumeDialog(false);
+		loadNewQuestion();
+	};
+
+	const handleNewGame = () => {
+		clearGameProgress("classic");
+		flagHistory.current.reset();
+		setShowResumeDialog(false);
 		loadNewQuestion();
 	};
 
@@ -216,65 +266,108 @@ export default function GamePage() {
 				<div className="w-full max-w-6xl mx-auto">
 					{/* Hauptcontainer */}
 					<div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl pb-24">
-						{currentCountry ? (
-							<div className="space-y-12">
-								{/* Score Anzeige */}
-								<div className="text-center mb-8">
-									<div className="inline-flex items-center gap-4 rounded-full border border-white/10 bg-black/40 px-6 py-3 backdrop-blur-xl">
-										<span className="text-lg font-semibold text-white">
-											Punkte: <span className="text-green-400">{score}</span> von {total}
-										</span>
-									</div>
-								</div>
-
-								{/* Flagge in der Mitte - ohne Rand */}
-								<div className="flex items-center justify-center">
-									<div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
-										<img
-											src={currentCountry.flags?.svg || currentCountry.flags?.png || ""}
-											alt="Flagge"
-											className="w-full h-full object-contain"
-										/>
-									</div>
-								</div>
-
-								{/* 4 Antwort-Buttons horizontal - kleiner horizontal, größer vertikal */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									{options.map((option, index) => (
+						<AnimatePresence mode="wait">
+							{showResumeDialog ? (
+								<motion.div
+									key="resume"
+									initial={{ opacity: 0, scale: 0.9 }}
+									animate={{ opacity: 1, scale: 1 }}
+									exit={{ opacity: 0, scale: 0.9 }}
+									className="text-center space-y-8"
+								>
+									<div className="text-6xl mb-4">💾</div>
+									<h2 className="text-3xl font-bold text-white">Spielstand gefunden!</h2>
+									<p className="text-xl text-neutral-300">
+										Du hast einen Spielstand mit{" "}
+										<span className="text-green-400 font-bold">{savedProgress?.score}</span> von{" "}
+										<span className="text-white font-bold">{savedProgress?.total}</span> Punkten.
+									</p>
+									<div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
 										<button
-											key={index}
-											type="button"
-											className={getButtonClassName(option)}
-											onClick={() => handleAnswer(option)}
-											disabled={isAnswered}
+											onClick={handleResume}
+											className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
 										>
-											{option}
+											Fortsetzen
 										</button>
-									))}
-								</div>
-
-								{/* Weiter-Button - Platzhalter damit Container nicht wächst */}
-								<div className="flex justify-center mt-6 min-h-[52px]">
-									{isAnswered && (
 										<button
-											type="button"
-											onClick={handleNext}
-											className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+											onClick={handleNewGame}
+											className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
 										>
-											Weiter
+											Neues Spiel
 										</button>
-									)}
-								</div>
-							</div>
-						) : (
-							<div className="text-center text-white">
-								<p>Lädt...</p>
-							</div>
-						)}
+									</div>
+								</motion.div>
+							) : currentCountry ? (
+								<motion.div
+									key="game"
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									className="space-y-12"
+								>
+									{/* Score Anzeige */}
+									<div className="text-center mb-8">
+										<div className="inline-flex items-center gap-4 rounded-full border border-white/10 bg-black/40 px-6 py-3 backdrop-blur-xl">
+											<span className="text-lg font-semibold text-white">
+												Punkte: <span className="text-green-400">{score}</span> von {total}
+											</span>
+										</div>
+									</div>
+
+									{/* Flagge in der Mitte - ohne Rand */}
+									<div className="flex items-center justify-center">
+										<div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
+											<img
+												src={currentCountry.flags?.svg || currentCountry.flags?.png || ""}
+												alt="Flagge"
+												className="w-full h-full object-contain"
+											/>
+										</div>
+									</div>
+
+									{/* 4 Antwort-Buttons horizontal - kleiner horizontal, größer vertikal */}
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										{options.map((option, index) => (
+											<button
+												key={index}
+												type="button"
+												className={getButtonClassName(option)}
+												onClick={() => handleAnswer(option)}
+												disabled={isAnswered}
+											>
+												{option}
+											</button>
+										))}
+									</div>
+
+									{/* Weiter-Button - Platzhalter damit Container nicht wächst */}
+									<div className="flex justify-center mt-6 min-h-[52px]">
+										{isAnswered && (
+											<button
+												type="button"
+												onClick={handleNext}
+												className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+											>
+												Weiter
+											</button>
+										)}
+									</div>
+								</motion.div>
+							) : (
+								<motion.div
+									key="loading"
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									className="text-center text-white"
+								>
+									<p>Lädt...</p>
+								</motion.div>
+							)}
+						</AnimatePresence>
 					</div>
 				</div>
 			</div>
 		</div>
 	);
 }
-

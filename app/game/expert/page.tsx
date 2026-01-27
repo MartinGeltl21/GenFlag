@@ -7,8 +7,9 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
+import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward, IconDoorExit } from "@tabler/icons-react";
+import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -28,17 +29,20 @@ export default function ExpertPage() {
     const [correctAnswer, setCorrectAnswer] = useState<string>("");
     const [isAnswered, setIsAnswered] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
-    const [isSkipped, setIsSkipped] = useState(false);
+    const [gameOver, setGameOver] = useState(false);
     const [score, setScore] = useState(0);
     const [total, setTotal] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState(-1);
-    const [gameEnded, setGameEnded] = useState(false);
     const [rank, setRank] = useState<number | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isSkipped, setIsSkipped] = useState(false);
+    const [showResumeDialog, setShowResumeDialog] = useState(false);
+    const [savedProgress, setSavedProgress] = useState<{ score: number; total: number } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const flagHistory = useRef(new FlagHistory(40));
+    const hasCheckedProgress = useRef(false);
 
     // Get all German country names for autocomplete
     const allGermanNames = useMemo(() => {
@@ -69,12 +73,31 @@ export default function ExpertPage() {
         fetchCountries();
     }, []);
 
+    // Check for saved progress on mount
     useEffect(() => {
-        if (countries.length > 0 && !currentCountry) {
+        const checkProgress = async () => {
+            if (hasCheckedProgress.current) return;
+            hasCheckedProgress.current = true;
+
+            const progress = await loadGameProgress("expert");
+            if (progress && progress.score > 0) {
+                setSavedProgress({ score: progress.score, total: progress.total || progress.score });
+                setShowResumeDialog(true);
+                // Restore flag history if available
+                if (progress.flagHistory) {
+                    progress.flagHistory.forEach(code => flagHistory.current.addFlag(code));
+                }
+            }
+        };
+        checkProgress();
+    }, []);
+
+    useEffect(() => {
+        if (countries.length > 0 && !currentCountry && !showResumeDialog) {
             loadNewQuestion();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [countries.length]);
+    }, [countries.length, showResumeDialog]);
 
     // Reset selected index when suggestions change
     useEffect(() => {
@@ -105,7 +128,7 @@ export default function ExpertPage() {
         setInputValue("");
         setIsAnswered(false);
         setIsCorrect(false);
-        setIsSkipped(false);
+        setGameOver(false);
         setShowSuggestions(false);
         setSelectedIndex(-1);
 
@@ -136,7 +159,7 @@ export default function ExpertPage() {
         };
     }, [isAnswered, loadNewQuestion]);
 
-    const handleSubmit = (answer: string) => {
+    const handleSubmit = async (answer: string) => {
         if (isAnswered) return;
 
         const normalizedAnswer = answer.trim().toLowerCase();
@@ -153,29 +176,30 @@ export default function ExpertPage() {
         setShowSuggestions(false);
         setSelectedIndex(-1);
 
-        if (correct) {
-            setScore((prev) => prev + 1);
-        }
-
         saveFlagResult(currentCountry?.cca2 || "", correct);
 
-        // Auto-advance to next question after 1 second
-        autoAdvanceTimerRef.current = setTimeout(() => {
-            loadNewQuestion();
-        }, 1000);
-    };
-
-    const handleSkip = () => {
-        if (isAnswered) return;
-
-        setIsAnswered(true);
-        setIsCorrect(false);
-        setIsSkipped(true);
-        setTotal((prev) => prev + 1);
-        setShowSuggestions(false);
-        setSelectedIndex(-1);
-
-        saveFlagResult(currentCountry?.cca2 || "", false);
+        if (correct) {
+            const newScore = score + 1;
+            const newTotal = total + 1;
+            setScore(newScore);
+            // Save progress after each correct answer - await to ensure it completes
+            await saveGameProgress("expert", {
+                score: newScore,
+                total: newTotal,
+                flagHistory: flagHistory.current.getHistory(),
+            });
+            // Auto-advance to next question after 1 second only on correct answer
+            autoAdvanceTimerRef.current = setTimeout(() => {
+                loadNewQuestion();
+            }, 1000);
+        } else {
+            // Game Over on first wrong answer
+            setGameOver(true);
+            // Clear saved progress on game over
+            await clearGameProgress("expert");
+            // Save highscore when game is over
+            saveHighscore(score);
+        }
     };
 
     const saveHighscore = async (finalScore: number) => {
@@ -205,24 +229,41 @@ export default function ExpertPage() {
         setRank((count ?? 0) + 1);
     };
 
-    const handleEndGame = () => {
-        // Clear any pending auto-advance timer
-        if (autoAdvanceTimerRef.current) {
-            clearTimeout(autoAdvanceTimerRef.current);
-            autoAdvanceTimerRef.current = null;
-        }
-        setGameEnded(true);
-        saveHighscore(score);
-    };
-
     const handleRestart = () => {
         setScore(0);
         setTotal(0);
-        setGameEnded(false);
+        setGameOver(false);
         setRank(null);
-        setCurrentCountry(null);
+        setIsSkipped(false);
         flagHistory.current.reset();
-        setTimeout(() => loadNewQuestion(), 0);
+        clearGameProgress("expert");
+        loadNewQuestion();
+    };
+
+    const handleResume = () => {
+        if (savedProgress) {
+            setScore(savedProgress.score);
+            setTotal(savedProgress.total);
+        }
+        setShowResumeDialog(false);
+        loadNewQuestion();
+    };
+
+    const handleNewGame = () => {
+        clearGameProgress("expert");
+        flagHistory.current.reset();
+        setShowResumeDialog(false);
+        loadNewQuestion();
+    };
+
+    const handleSkip = () => {
+        if (isAnswered) return;
+        setIsAnswered(true);
+        setIsSkipped(true);
+        setTotal((prev) => prev + 1);
+        setShowSuggestions(false);
+        setGameOver(true);
+        saveHighscore(score);
     };
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -334,7 +375,36 @@ export default function ExpertPage() {
                 <div className="w-full max-w-6xl mx-auto">
                     <div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl pb-24">
                         <AnimatePresence mode="wait">
-                            {gameEnded ? (
+                            {showResumeDialog ? (
+                                <motion.div
+                                    key="resume"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="text-center space-y-8"
+                                >
+                                    <div className="text-6xl mb-4">💾</div>
+                                    <h2 className="text-3xl font-bold text-white">Spielstand gefunden!</h2>
+                                    <p className="text-xl text-neutral-300">
+                                        Du hast einen gespeicherten Spielstand mit{" "}
+                                        <span className="text-green-400 font-bold">{savedProgress?.score}</span> Punkten.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                        <button
+                                            onClick={handleResume}
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
+                                        >
+                                            Fortsetzen
+                                        </button>
+                                        <button
+                                            onClick={handleNewGame}
+                                            className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
+                                        >
+                                            Neues Spiel
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ) : gameOver ? (
                                 <motion.div
                                     key="gameover"
                                     initial={{ opacity: 0, scale: 0.9 }}
@@ -343,9 +413,9 @@ export default function ExpertPage() {
                                     className="text-center space-y-8"
                                 >
                                     <div className="text-6xl mb-4">🧠</div>
-                                    <h2 className="text-4xl font-bold text-white">Spiel beendet!</h2>
+                                    <h2 className="text-4xl font-bold text-white">Game Over!</h2>
                                     <p className="text-2xl text-neutral-300">
-                                        Dein Punktestand: <span className="text-green-400 font-bold">{score}</span> von {total}
+                                        Dein Punktestand: <span className="text-green-400 font-bold">{score}</span>
                                     </p>
                                     {rank !== null && (
                                         <div className="flex items-center justify-center gap-2">
@@ -362,7 +432,7 @@ export default function ExpertPage() {
                                     <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                                         <button
                                             onClick={handleRestart}
-                                            className="text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-purple-500/20 transition-all"
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
                                         >
                                             Nochmal spielen
                                         </button>
@@ -445,13 +515,6 @@ export default function ExpertPage() {
                                                         title="Überspringen (ESC)"
                                                     >
                                                         <IconPlayerSkipForward className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={handleEndGame}
-                                                        className="px-3 h-[42px] bg-red-700 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
-                                                        title="Spiel beenden"
-                                                    >
-                                                        <IconDoorExit className="h-4 w-4" />
                                                     </button>
                                                 </div>
                                             )}
