@@ -63,13 +63,15 @@ export default function HighscorePage() {
                 return;
             }
 
-            // Map the data to include the username
-            const mapped = (data || []).map((entry: any) => ({
-                id: entry.id,
-                username: entry.profiles?.username || "Anonym",
-                score: entry.score,
-                created_at: entry.created_at,
-            }));
+            // Map the data to include the username and filter out entries without profiles
+            const mapped = (data || [])
+                .filter((entry: any) => entry.profiles?.username) // Only include entries with valid profiles
+                .map((entry: any) => ({
+                    id: entry.id,
+                    username: entry.profiles.username,
+                    score: entry.score,
+                    created_at: entry.created_at,
+                }));
 
             // Deduplicate: keep only best score per player (first occurrence since already sorted by score desc)
             const seen = new Set<string>();
