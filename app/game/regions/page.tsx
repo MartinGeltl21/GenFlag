@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
+import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -39,6 +40,9 @@ export default function RegionsPage() {
     const [score, setScore] = useState(0);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [showResumeDialog, setShowResumeDialog] = useState(false);
+    const [savedProgress, setSavedProgress] = useState<{ score: number; total: number; selectedRegion: string } | null>(null);
+    const hasCheckedProgress = useRef(false);
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -57,6 +61,25 @@ export default function RegionsPage() {
         };
 
         fetchCountries();
+    }, []);
+
+    // Check for saved progress on mount
+    useEffect(() => {
+        const checkProgress = async () => {
+            if (hasCheckedProgress.current) return;
+            hasCheckedProgress.current = true;
+
+            const progress = await loadGameProgress("regions");
+            if (progress && progress.score > 0 && progress.selectedRegion) {
+                setSavedProgress({
+                    score: progress.score,
+                    total: progress.total || progress.score,
+                    selectedRegion: progress.selectedRegion
+                });
+                setShowResumeDialog(true);
+            }
+        };
+        checkProgress();
     }, []);
 
     const selectRegion = (regionId: string) => {
@@ -131,13 +154,25 @@ export default function RegionsPage() {
 
         setSelectedAnswer(answer);
         setIsAnswered(true);
-        setTotal((prev) => prev + 1);
+        const newTotal = total + 1;
+        setTotal(newTotal);
 
         if (answer === correctAnswer) {
-            setScore((prev) => prev + 1);
+            const newScore = score + 1;
+            setScore(newScore);
             saveFlagResult(currentCountry?.cca2 || "", true);
+            saveGameProgress("regions", {
+                score: newScore,
+                total: newTotal,
+                selectedRegion: selectedRegion || "",
+            });
         } else {
             saveFlagResult(currentCountry?.cca2 || "", false);
+            saveGameProgress("regions", {
+                score,
+                total: newTotal,
+                selectedRegion: selectedRegion || "",
+            });
         }
     };
 
@@ -150,6 +185,24 @@ export default function RegionsPage() {
         setCurrentCountry(null);
         setScore(0);
         setTotal(0);
+        clearGameProgress("regions");
+    };
+
+    const handleResume = () => {
+        if (savedProgress) {
+            setScore(savedProgress.score);
+            setTotal(savedProgress.total);
+            const regionCountries = allCountries.filter((c) => c.region === savedProgress.selectedRegion);
+            setCountries(regionCountries);
+            setSelectedRegion(savedProgress.selectedRegion);
+        }
+        setShowResumeDialog(false);
+        setTimeout(() => loadNewQuestion(), 0);
+    };
+
+    const handleNewGame = () => {
+        clearGameProgress("regions");
+        setShowResumeDialog(false);
     };
 
     const getButtonClassName = (option: string) => {
@@ -239,7 +292,40 @@ export default function RegionsPage() {
             <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden dark:bg-black px-4">
                 <div className="w-full max-w-6xl mx-auto">
                     <AnimatePresence mode="wait">
-                        {!selectedRegion ? (
+                        {showResumeDialog ? (
+                            <motion.div
+                                key="resume"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl text-center space-y-8"
+                            >
+                                <div className="text-6xl mb-4">💾</div>
+                                <h2 className="text-3xl font-bold text-white">Spielstand gefunden!</h2>
+                                <p className="text-xl text-neutral-300">
+                                    Du hast einen Spielstand in{" "}
+                                    <span className="text-green-400 font-bold">
+                                        {regions.find(r => r.id === savedProgress?.selectedRegion)?.name}
+                                    </span>{" "}
+                                    mit <span className="text-green-400 font-bold">{savedProgress?.score}</span> von{" "}
+                                    <span className="text-white font-bold">{savedProgress?.total}</span> Punkten.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                    <button
+                                        onClick={handleResume}
+                                        className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
+                                    >
+                                        Fortsetzen
+                                    </button>
+                                    <button
+                                        onClick={handleNewGame}
+                                        className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
+                                    >
+                                        Neues Spiel
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ) : !selectedRegion ? (
                             <motion.div
                                 key="selection"
                                 initial={{ opacity: 0, y: 20 }}

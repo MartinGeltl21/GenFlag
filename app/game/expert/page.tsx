@@ -7,11 +7,13 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
+import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { createClient } from "@/lib/supabase/client";
 
 interface Country {
     name: { common: string; official: string };
@@ -27,14 +29,20 @@ export default function ExpertPage() {
     const [correctAnswer, setCorrectAnswer] = useState<string>("");
     const [isAnswered, setIsAnswered] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
-    const [isSkipped, setIsSkipped] = useState(false);
+    const [gameOver, setGameOver] = useState(false);
     const [score, setScore] = useState(0);
     const [total, setTotal] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [rank, setRank] = useState<number | null>(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isSkipped, setIsSkipped] = useState(false);
+    const [showResumeDialog, setShowResumeDialog] = useState(false);
+    const [savedProgress, setSavedProgress] = useState<{ score: number; total: number } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const flagHistory = useRef(new FlagHistory(40));
+    const hasCheckedProgress = useRef(false);
 
     // Get all German country names for autocomplete
     const allGermanNames = useMemo(() => {
@@ -65,12 +73,31 @@ export default function ExpertPage() {
         fetchCountries();
     }, []);
 
+    // Check for saved progress on mount
     useEffect(() => {
-        if (countries.length > 0 && !currentCountry) {
+        const checkProgress = async () => {
+            if (hasCheckedProgress.current) return;
+            hasCheckedProgress.current = true;
+
+            const progress = await loadGameProgress("expert");
+            if (progress && progress.score > 0) {
+                setSavedProgress({ score: progress.score, total: progress.total || progress.score });
+                setShowResumeDialog(true);
+                // Restore flag history if available
+                if (progress.flagHistory) {
+                    progress.flagHistory.forEach(code => flagHistory.current.addFlag(code));
+                }
+            }
+        };
+        checkProgress();
+    }, []);
+
+    useEffect(() => {
+        if (countries.length > 0 && !currentCountry && !showResumeDialog) {
             loadNewQuestion();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [countries.length]);
+    }, [countries.length, showResumeDialog]);
 
     // Reset selected index when suggestions change
     useEffect(() => {
@@ -101,7 +128,7 @@ export default function ExpertPage() {
         setInputValue("");
         setIsAnswered(false);
         setIsCorrect(false);
-        setIsSkipped(false);
+        setGameOver(false);
         setShowSuggestions(false);
         setSelectedIndex(-1);
 
@@ -149,29 +176,94 @@ export default function ExpertPage() {
         setShowSuggestions(false);
         setSelectedIndex(-1);
 
-        if (correct) {
-            setScore((prev) => prev + 1);
-        }
-
         saveFlagResult(currentCountry?.cca2 || "", correct);
 
-        // Auto-advance to next question after 1 second
-        autoAdvanceTimerRef.current = setTimeout(() => {
-            loadNewQuestion();
-        }, 1000);
+        if (correct) {
+            const newScore = score + 1;
+            const newTotal = total + 1;
+            setScore(newScore);
+            // Save progress after each correct answer
+            saveGameProgress("expert", {
+                score: newScore,
+                total: newTotal,
+                flagHistory: flagHistory.current.getHistory(),
+            });
+            // Auto-advance to next question after 1 second only on correct answer
+            autoAdvanceTimerRef.current = setTimeout(() => {
+                loadNewQuestion();
+            }, 1000);
+        } else {
+            // Game Over on first wrong answer
+            setGameOver(true);
+            // Clear saved progress on game over
+            clearGameProgress("expert");
+            // Save highscore when game is over
+            saveHighscore(score);
+        }
+    };
+
+    const saveHighscore = async (finalScore: number) => {
+        if (finalScore <= 0) return;
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setIsLoggedIn(false);
+            return;
+        }
+        setIsLoggedIn(true);
+
+        // Insert the new highscore with game_mode
+        await supabase.from("highscores").insert({
+            user_id: user.id,
+            score: finalScore,
+            game_mode: "expert",
+        });
+
+        // Get the rank (count of scores higher than ours + 1) for this game mode
+        const { count } = await supabase
+            .from("highscores")
+            .select("*", { count: "exact", head: true })
+            .eq("game_mode", "expert")
+            .gt("score", finalScore);
+
+        setRank((count ?? 0) + 1);
+    };
+
+    const handleRestart = () => {
+        setScore(0);
+        setTotal(0);
+        setGameOver(false);
+        setRank(null);
+        setIsSkipped(false);
+        flagHistory.current.reset();
+        clearGameProgress("expert");
+        loadNewQuestion();
+    };
+
+    const handleResume = () => {
+        if (savedProgress) {
+            setScore(savedProgress.score);
+            setTotal(savedProgress.total);
+        }
+        setShowResumeDialog(false);
+        loadNewQuestion();
+    };
+
+    const handleNewGame = () => {
+        clearGameProgress("expert");
+        flagHistory.current.reset();
+        setShowResumeDialog(false);
+        loadNewQuestion();
     };
 
     const handleSkip = () => {
         if (isAnswered) return;
-
         setIsAnswered(true);
-        setIsCorrect(false);
         setIsSkipped(true);
         setTotal((prev) => prev + 1);
         setShowSuggestions(false);
-        setSelectedIndex(-1);
-
-        saveFlagResult(currentCountry?.cca2 || "", false);
+        setGameOver(true);
+        saveHighscore(score);
     };
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -282,151 +374,228 @@ export default function ExpertPage() {
             <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden dark:bg-black px-4">
                 <div className="w-full max-w-6xl mx-auto">
                     <div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl pb-24">
-                        {currentCountry ? (
-                            <div className="space-y-12">
-                                {/* Score */}
-                                <div className="text-center mb-8">
-                                    <div className="inline-flex items-center gap-4 rounded-full border border-white/10 bg-black/40 px-6 py-3 backdrop-blur-xl">
-                                        <span className="text-lg font-semibold text-white">
-                                            <span className="text-purple-400">🧠 Experte</span> | Punkte:{" "}
-                                            <span className="text-green-400">{score}</span> von {total}
-                                        </span>
+                        <AnimatePresence mode="wait">
+                            {showResumeDialog ? (
+                                <motion.div
+                                    key="resume"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="text-center space-y-8"
+                                >
+                                    <div className="text-6xl mb-4">💾</div>
+                                    <h2 className="text-3xl font-bold text-white">Spielstand gefunden!</h2>
+                                    <p className="text-xl text-neutral-300">
+                                        Du hast einen gespeicherten Spielstand mit{" "}
+                                        <span className="text-green-400 font-bold">{savedProgress?.score}</span> Punkten.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                        <button
+                                            onClick={handleResume}
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
+                                        >
+                                            Fortsetzen
+                                        </button>
+                                        <button
+                                            onClick={handleNewGame}
+                                            className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
+                                        >
+                                            Neues Spiel
+                                        </button>
                                     </div>
-                                </div>
-
-                                {/* Flag */}
-                                <div className="flex items-center justify-center">
-                                    <div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
-                                        <img
-                                            src={currentCountry.flags?.svg || currentCountry.flags?.png || ""}
-                                            alt="Flagge"
-                                            className="w-full h-full object-contain"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Input Field */}
-                                <div className="relative max-w-md mx-auto">
-                                    <div className="relative">
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={inputValue}
-                                            onChange={(e) => {
-                                                setInputValue(e.target.value);
-                                                setShowSuggestions(e.target.value.length >= 1);
-                                                setSelectedIndex(-1);
-                                            }}
-                                            onKeyDown={handleKeyDown}
-                                            onFocus={() => setShowSuggestions(inputValue.length >= 1)}
-                                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                            placeholder="Ländername eingeben..."
-                                            disabled={isAnswered}
-                                            className={cn(
-                                                "w-full px-6 py-4 text-lg rounded-xl border-2 bg-black/50 text-white placeholder-neutral-500 focus:outline-none transition-colors",
-                                                isAnswered && isCorrect
-                                                    ? "border-green-500 bg-green-500/10"
-                                                    : isAnswered && !isCorrect
-                                                        ? "border-red-500 bg-red-500/10"
-                                                        : "border-white/20 focus:border-purple-500"
+                                </motion.div>
+                            ) : gameOver ? (
+                                <motion.div
+                                    key="gameover"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="text-center space-y-8"
+                                >
+                                    <div className="text-6xl mb-4">🧠</div>
+                                    <h2 className="text-4xl font-bold text-white">Game Over!</h2>
+                                    <p className="text-2xl text-neutral-300">
+                                        Dein Punktestand: <span className="text-green-400 font-bold">{score}</span>
+                                    </p>
+                                    {rank !== null && (
+                                        <div className="flex items-center justify-center gap-2">
+                                            {rank <= 3 ? (
+                                                <span className="text-4xl">{rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}</span>
+                                            ) : (
+                                                <span className="text-2xl">🏅</span>
                                             )}
-                                        />
-                                        {!isAnswered && (
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                {inputValue.trim() && (
-                                                    <button
-                                                        onClick={() => handleSubmit(inputValue)}
-                                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-                                                    >
-                                                        Prüfen
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={handleSkip}
-                                                    className="px-3 h-[42px] bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
-                                                    title="Überspringen (ESC)"
-                                                >
-                                                    <IconPlayerSkipForward className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        )}
+                                            <p className="text-xl text-amber-400">
+                                                Platz <span className="font-bold">{rank}</span> in der Bestenliste!
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                        <button
+                                            onClick={handleRestart}
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-green-500/20 transition-all"
+                                        >
+                                            Nochmal spielen
+                                        </button>
+                                        <Link
+                                            href="/game/modes"
+                                            className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
+                                        >
+                                            Zurück zur Auswahl
+                                        </Link>
+                                    </div>
+                                </motion.div>
+                            ) : currentCountry ? (
+                                <motion.div
+                                    key="game"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-12"
+                                >
+                                    {/* Score */}
+                                    <div className="text-center mb-8">
+                                        <div className="inline-flex items-center gap-4 rounded-full border border-white/10 bg-black/40 px-6 py-3 backdrop-blur-xl">
+                                            <span className="text-lg font-semibold text-white">
+                                                <span className="text-purple-400">🧠 Experte</span> | Punkte:{" "}
+                                                <span className="text-green-400">{score}</span> von {total}
+                                            </span>
+                                        </div>
                                     </div>
 
+                                    {/* Flag */}
+                                    <div className="flex items-center justify-center">
+                                        <div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
+                                            <img
+                                                src={currentCountry.flags?.svg || currentCountry.flags?.png || ""}
+                                                alt="Flagge"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                    </div>
 
-
-                                    {/* Suggestions Dropdown */}
-                                    <AnimatePresence>
-                                        {showSuggestions && suggestions.length > 0 && !isAnswered && (
-                                            <motion.div
-                                                ref={suggestionsRef}
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                className="absolute z-50 w-full mt-2 rounded-xl border border-white/10 bg-black/95 backdrop-blur-xl overflow-hidden shadow-2xl"
-                                            >
-                                                {suggestions.map((suggestion, index) => (
+                                    {/* Input Field */}
+                                    <div className="relative max-w-md mx-auto">
+                                        <div className="relative">
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                value={inputValue}
+                                                onChange={(e) => {
+                                                    setInputValue(e.target.value);
+                                                    setShowSuggestions(e.target.value.length >= 1);
+                                                    setSelectedIndex(-1);
+                                                }}
+                                                onKeyDown={handleKeyDown}
+                                                onFocus={() => setShowSuggestions(inputValue.length >= 1)}
+                                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                                placeholder="Ländername eingeben..."
+                                                disabled={isAnswered}
+                                                className={cn(
+                                                    "w-full px-6 py-4 text-lg rounded-xl border-2 bg-black/50 text-white placeholder-neutral-500 focus:outline-none transition-colors",
+                                                    isAnswered && isCorrect
+                                                        ? "border-green-500 bg-green-500/10"
+                                                        : isAnswered && !isCorrect
+                                                            ? "border-red-500 bg-red-500/10"
+                                                            : "border-white/20 focus:border-purple-500"
+                                                )}
+                                            />
+                                            {!isAnswered && (
+                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                    {inputValue.trim() && (
+                                                        <button
+                                                            onClick={() => handleSubmit(inputValue)}
+                                                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                                                        >
+                                                            Prüfen
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        key={index}
-                                                        onMouseDown={() => handleSuggestionClick(suggestion)}
-                                                        onMouseEnter={() => setSelectedIndex(index)}
-                                                        className={cn(
-                                                            "w-full px-4 py-3 text-left text-white transition-colors border-b border-white/5 last:border-b-0",
-                                                            selectedIndex === index
-                                                                ? "bg-purple-600/30 text-purple-200"
-                                                                : "hover:bg-white/10"
-                                                        )}
+                                                        onClick={handleSkip}
+                                                        className="px-3 h-[42px] bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
+                                                        title="Überspringen (ESC)"
                                                     >
-                                                        {suggestion}
+                                                        <IconPlayerSkipForward className="h-4 w-4" />
                                                     </button>
-                                                ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+
+
+                                        {/* Suggestions Dropdown */}
+                                        <AnimatePresence>
+                                            {showSuggestions && suggestions.length > 0 && !isAnswered && (
+                                                <motion.div
+                                                    ref={suggestionsRef}
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="absolute z-50 w-full mt-2 rounded-xl border border-white/10 bg-black/95 backdrop-blur-xl overflow-hidden shadow-2xl"
+                                                >
+                                                    {suggestions.map((suggestion, index) => (
+                                                        <button
+                                                            key={index}
+                                                            onMouseDown={() => handleSuggestionClick(suggestion)}
+                                                            onMouseEnter={() => setSelectedIndex(index)}
+                                                            className={cn(
+                                                                "w-full px-4 py-3 text-left text-white transition-colors border-b border-white/5 last:border-b-0",
+                                                                selectedIndex === index
+                                                                    ? "bg-purple-600/30 text-purple-200"
+                                                                    : "hover:bg-white/10"
+                                                            )}
+                                                        >
+                                                            {suggestion}
+                                                        </button>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
+                                    {/* Result Message */}
+                                    <AnimatePresence>
+                                        {isAnswered && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="text-center"
+                                            >
+                                                {isCorrect ? (
+                                                    <p className="text-2xl font-bold text-green-400">✓ Richtig!</p>
+                                                ) : isSkipped ? (
+                                                    <p className="text-xl text-amber-400">
+                                                        ⏭ Übersprungen! Es war:{" "}
+                                                        <span className="font-bold text-white">{correctAnswer}</span>
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xl text-red-400">
+                                                        ✗ Falsch! Richtig war:{" "}
+                                                        <span className="font-bold text-white">{correctAnswer}</span>
+                                                    </p>
+                                                )}
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
-                                </div>
 
-                                {/* Result Message */}
-                                <AnimatePresence>
-                                    {isAnswered && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="text-center"
-                                        >
-                                            {isCorrect ? (
-                                                <p className="text-2xl font-bold text-green-400">✓ Richtig!</p>
-                                            ) : isSkipped ? (
-                                                <p className="text-xl text-amber-400">
-                                                    ⏭ Übersprungen! Es war:{" "}
-                                                    <span className="font-bold text-white">{correctAnswer}</span>
-                                                </p>
-                                            ) : (
-                                                <p className="text-xl text-red-400">
-                                                    ✗ Falsch! Richtig war:{" "}
-                                                    <span className="font-bold text-white">{correctAnswer}</span>
-                                                </p>
-                                            )}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                {/* Next Button */}
-                                <div className="flex justify-center mt-6 min-h-[52px]">
-                                    {isAnswered && (
-                                        <button
-                                            type="button"
-                                            onClick={handleNext}
-                                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                        >
-                                            Weiter (Enter)
-                                        </button>
-                                    )}
+                                    {/* Next Button */}
+                                    <div className="flex justify-center mt-6 min-h-[52px]">
+                                        {isAnswered && (
+                                            <button
+                                                type="button"
+                                                onClick={handleNext}
+                                                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                            >
+                                                Weiter (Enter)
+                                            </button>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <div className="text-center text-white">
+                                    <p>Lädt...</p>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="text-center text-white">
-                                <p>Lädt...</p>
-                            </div>
-                        )}
+                            )}
+                        </AnimatePresence>
                     </div>
                 </div>
             </div>

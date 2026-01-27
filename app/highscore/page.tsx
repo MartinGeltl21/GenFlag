@@ -81,8 +81,8 @@ export default function HighscorePage() {
                 return true;
             });
 
-            // Limit to top 10
-            setHighscores(deduplicated.slice(0, 10));
+            // Limit to top 4
+            setHighscores(deduplicated.slice(0, 4));
             setLoading(false);
         };
 
