@@ -127,7 +127,7 @@ export default function GamePage() {
 		setIsAnswered(false);
 	};
 
-	const handleAnswer = (answer: string) => {
+	const handleAnswer = async (answer: string) => {
 		if (isAnswered) return;
 
 		setSelectedAnswer(answer);
@@ -139,14 +139,14 @@ export default function GamePage() {
 			const newScore = score + 1;
 			setScore(newScore);
 			saveFlagResult(currentCountry?.cca2 || "", true);
-			saveGameProgress("classic", {
+			await saveGameProgress("classic", {
 				score: newScore,
 				total: newTotal,
 				flagHistory: flagHistory.current.getHistory(),
 			});
 		} else {
 			saveFlagResult(currentCountry?.cca2 || "", false);
-			saveGameProgress("classic", {
+			await saveGameProgress("classic", {
 				score,
 				total: newTotal,
 				flagHistory: flagHistory.current.getHistory(),

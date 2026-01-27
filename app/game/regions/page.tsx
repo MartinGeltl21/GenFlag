@@ -149,7 +149,7 @@ export default function RegionsPage() {
         setIsAnswered(false);
     };
 
-    const handleAnswer = (answer: string) => {
+    const handleAnswer = async (answer: string) => {
         if (isAnswered) return;
 
         setSelectedAnswer(answer);
@@ -161,14 +161,14 @@ export default function RegionsPage() {
             const newScore = score + 1;
             setScore(newScore);
             saveFlagResult(currentCountry?.cca2 || "", true);
-            saveGameProgress("regions", {
+            await saveGameProgress("regions", {
                 score: newScore,
                 total: newTotal,
                 selectedRegion: selectedRegion || "",
             });
         } else {
             saveFlagResult(currentCountry?.cca2 || "", false);
-            saveGameProgress("regions", {
+            await saveGameProgress("regions", {
                 score,
                 total: newTotal,
                 selectedRegion: selectedRegion || "",

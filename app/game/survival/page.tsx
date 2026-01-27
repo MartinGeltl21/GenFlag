@@ -127,7 +127,7 @@ export default function SurvivalPage() {
         setIsAnswered(false);
     };
 
-    const handleAnswer = (answer: string) => {
+    const handleAnswer = async (answer: string) => {
         if (isAnswered || gameOver) return;
 
         setSelectedAnswer(answer);
@@ -138,7 +138,7 @@ export default function SurvivalPage() {
             setScore(newScore);
             saveFlagResult(currentCountry?.cca2 || "", true);
             // Save progress after each correct answer
-            saveGameProgress("survival", {
+            await saveGameProgress("survival", {
                 score: newScore,
                 lives,
                 flagHistory: flagHistory.current.getHistory(),
@@ -149,11 +149,11 @@ export default function SurvivalPage() {
             setLives(newLives);
             if (newLives <= 0) {
                 setGameOver(true);
-                clearGameProgress("survival");
+                await clearGameProgress("survival");
                 saveHighscore(score + (answer === correctAnswer ? 1 : 0));
             } else {
                 // Save progress with reduced lives
-                saveGameProgress("survival", {
+                await saveGameProgress("survival", {
                     score,
                     lives: newLives,
                     flagHistory: flagHistory.current.getHistory(),

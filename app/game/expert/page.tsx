@@ -159,7 +159,7 @@ export default function ExpertPage() {
         };
     }, [isAnswered, loadNewQuestion]);
 
-    const handleSubmit = (answer: string) => {
+    const handleSubmit = async (answer: string) => {
         if (isAnswered) return;
 
         const normalizedAnswer = answer.trim().toLowerCase();
@@ -182,8 +182,8 @@ export default function ExpertPage() {
             const newScore = score + 1;
             const newTotal = total + 1;
             setScore(newScore);
-            // Save progress after each correct answer
-            saveGameProgress("expert", {
+            // Save progress after each correct answer - await to ensure it completes
+            await saveGameProgress("expert", {
                 score: newScore,
                 total: newTotal,
                 flagHistory: flagHistory.current.getHistory(),
@@ -196,7 +196,7 @@ export default function ExpertPage() {
             // Game Over on first wrong answer
             setGameOver(true);
             // Clear saved progress on game over
-            clearGameProgress("expert");
+            await clearGameProgress("expert");
             // Save highscore when game is over
             saveHighscore(score);
         }
