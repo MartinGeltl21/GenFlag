@@ -101,32 +101,38 @@ export function DuelLobby({ game, playerRole, countries, onGameStart }: DuelLobb
             ) : playerRole === "player1" && !game.player2_name ? (
                 // Waiting for player 2
                 <>
-                    <div className="text-6xl mb-4">⏳</div>
-                    <h2 className="text-3xl font-bold text-white">Warte auf Gegner...</h2>
-                    <p className="text-lg text-neutral-300">
+                    <div className="text-5xl md:text-6xl mb-4">⏳</div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">Warte auf Gegner...</h2>
+                    <p className="text-base md:text-lg text-neutral-300">
                         Teile diesen Link mit deinem Freund:
                     </p>
 
-                    <div className="flex items-center gap-2 max-w-lg mx-auto">
-                        <div className="flex-1 px-4 py-3 bg-black/50 border border-white/20 rounded-lg text-white font-mono text-sm truncate">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-lg mx-auto px-2">
+                        <div className="flex-1 px-3 py-2.5 md:px-4 md:py-3 bg-black/50 border border-white/20 rounded-lg text-white font-mono text-xs md:text-sm break-all sm:truncate">
                             {inviteLink}
                         </div>
                         <button
                             onClick={copyToClipboard}
-                            className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                            className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                             {copied ? (
-                                <IconCheck className="w-5 h-5 text-white" />
+                                <>
+                                    <IconCheck className="w-5 h-5 text-white" />
+                                    <span className="sm:hidden text-white text-sm">Kopiert!</span>
+                                </>
                             ) : (
-                                <IconCopy className="w-5 h-5 text-white" />
+                                <>
+                                    <IconCopy className="w-5 h-5 text-white" />
+                                    <span className="sm:hidden text-white text-sm">Link kopieren</span>
+                                </>
                             )}
                         </button>
                     </div>
 
-                    <div className="pt-6">
-                        <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/40 px-6 py-3">
-                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-white">
+                    <div className="pt-4 md:pt-6">
+                        <div className="inline-flex items-center gap-2 md:gap-3 rounded-full border border-white/10 bg-black/40 px-4 py-2 md:px-6 md:py-3">
+                            <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-sm md:text-base text-white">
                                 Du spielst als: <span className="text-green-400 font-semibold">{game.player1_name}</span>
                             </span>
                         </div>

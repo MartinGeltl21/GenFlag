@@ -272,11 +272,11 @@ export default function DuelGamePage({ params }: { params: Promise<{ id: string 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center space-y-8"
+                    className="text-center space-y-5 md:space-y-8 px-2 md:px-0"
                 >
-                    <div className="text-6xl mb-4">⚔️</div>
-                    <h2 className="text-3xl font-bold text-white">Duell beitreten</h2>
-                    <p className="text-neutral-300">
+                    <div className="text-5xl md:text-6xl mb-2 md:mb-4">⚔️</div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">Duell beitreten</h2>
+                    <p className="text-sm md:text-base text-neutral-300">
                         {game?.player1_name} fordert dich heraus!
                     </p>
 
@@ -294,7 +294,7 @@ export default function DuelGamePage({ params }: { params: Promise<{ id: string 
                     <button
                         onClick={handleJoin}
                         disabled={!playerName.trim()}
-                        className="px-8 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
+                        className="px-6 py-3 md:px-8 md:py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-white text-base md:text-lg font-semibold rounded-xl transition-colors"
                     >
                         Beitreten
                     </button>
@@ -379,9 +379,9 @@ export default function DuelGamePage({ params }: { params: Promise<{ id: string 
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden dark:bg-black px-4">
+            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-y-auto dark:bg-black px-2 py-3 md:px-4 md:py-0">
                 <div className="w-full max-w-6xl mx-auto">
-                    <div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl">
+                    <div className="rounded-2xl border border-white/10 bg-black p-4 md:p-8 lg:p-12 backdrop-blur-xl shadow-2xl">
                         {renderContent()}
                     </div>
                 </div>

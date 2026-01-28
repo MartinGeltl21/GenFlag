@@ -127,24 +127,24 @@ export default function DuelCreatePage() {
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden dark:bg-black px-4">
+            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-y-auto dark:bg-black px-3 py-4 md:px-4 md:py-0">
                 <div className="w-full max-w-lg mx-auto">
-                    <div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl">
+                    <div className="rounded-2xl border border-white/10 bg-black p-5 md:p-8 lg:p-12 backdrop-blur-xl shadow-2xl">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="text-center space-y-8"
+                            className="text-center space-y-5 md:space-y-8"
                         >
-                            <div className="text-6xl mb-4">⚔️</div>
-                            <h1 className="text-3xl font-bold text-white">1v1 Duell</h1>
-                            <p className="text-neutral-300">
+                            <div className="text-5xl md:text-6xl mb-2 md:mb-4">⚔️</div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-white">1v1 Duell</h1>
+                            <p className="text-sm md:text-base text-neutral-300">
                                 Fordere einen Freund heraus! Wer zuerst keine Leben mehr hat, verliert.
                             </p>
 
                             {/* Rules */}
-                            <div className="text-left bg-black/40 rounded-xl p-4 border border-white/10">
-                                <h3 className="text-white font-semibold mb-2">Regeln:</h3>
-                                <ul className="text-sm text-neutral-400 space-y-1">
+                            <div className="text-left bg-black/40 rounded-xl p-3 md:p-4 border border-white/10">
+                                <h3 className="text-sm md:text-base text-white font-semibold mb-2">Regeln:</h3>
+                                <ul className="text-xs md:text-sm text-neutral-400 space-y-1">
                                     <li>• Jeder Spieler hat <span className="text-red-400">3 Leben</span></li>
                                     <li>• Beide sehen die gleiche Flagge</li>
                                     <li>• <span className="text-amber-400">21 Sekunden</span> Zeit pro Runde</li>
@@ -154,7 +154,7 @@ export default function DuelCreatePage() {
 
                             {/* Name input */}
                             <div className="space-y-2">
-                                <label className="block text-sm text-neutral-400 text-left">
+                                <label className="block text-xs md:text-sm text-neutral-400 text-left">
                                     {isLoggedIn ? "Dein Anzeigename:" : "Gib deinen Namen ein:"}
                                 </label>
                                 <input
@@ -176,7 +176,7 @@ export default function DuelCreatePage() {
                                 onClick={handleCreateGame}
                                 disabled={isLoading || !playerName.trim()}
                                 className={cn(
-                                    "w-full py-4 rounded-xl font-semibold text-lg transition-all",
+                                    "w-full py-3 md:py-4 rounded-xl font-semibold text-base md:text-lg transition-all",
                                     isLoading || !playerName.trim()
                                         ? "bg-neutral-700 text-neutral-400 cursor-not-allowed"
                                         : "bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"

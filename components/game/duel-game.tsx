@@ -227,37 +227,59 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="space-y-8"
+            className="space-y-4 md:space-y-8"
         >
-            {/* Header with players and timer */}
-            <div className="flex items-center justify-between gap-4">
+            {/* Mobile: Timer on top, centered */}
+            <div className="flex justify-center md:hidden">
+                <div className={cn(
+                    "flex flex-col items-center justify-center w-16 h-16 rounded-full border-4",
+                    timeLeft <= 5 ? "border-red-500 bg-red-500/20" :
+                        timeLeft <= 10 ? "border-yellow-500 bg-yellow-500/20" :
+                            "border-purple-500 bg-purple-500/20"
+                )}>
+                    <span className={cn(
+                        "text-xl font-bold",
+                        timeLeft <= 5 ? "text-red-400" :
+                            timeLeft <= 10 ? "text-yellow-400" :
+                                "text-purple-400"
+                    )}>
+                        {timeLeft}
+                    </span>
+                    <span className="text-[10px] text-neutral-500">Sek</span>
+                </div>
+            </div>
+
+            {/* Header with players - stacked on mobile */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-4">
                 {/* Player 1 (Me) */}
                 <div className={cn(
-                    "flex-1 p-4 rounded-xl border",
+                    "flex-1 p-3 md:p-4 rounded-xl border",
                     playerRole === "player1"
                         ? "border-green-500/50 bg-green-500/10"
                         : "border-blue-500/50 bg-blue-500/10"
                 )}>
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-neutral-400">Du</p>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs md:text-sm text-neutral-400">Du</p>
                             <p className={cn(
-                                "font-bold",
+                                "font-bold text-sm md:text-base truncate",
                                 playerRole === "player1" ? "text-green-400" : "text-blue-400"
                             )}>
                                 {myName}
                             </p>
                         </div>
-                        {renderLives(myLives)}
+                        <div className="flex items-center gap-2">
+                            {renderLives(myLives)}
+                            {hasAnswered && (
+                                <span className="text-xs text-green-500">✓</span>
+                            )}
+                        </div>
                     </div>
-                    {hasAnswered && (
-                        <p className="text-xs text-neutral-500 mt-2">✓ Beantwortet</p>
-                    )}
                 </div>
 
-                {/* Timer */}
+                {/* Timer - hidden on mobile, shown on desktop */}
                 <div className={cn(
-                    "flex flex-col items-center justify-center w-20 h-20 rounded-full border-4",
+                    "hidden md:flex flex-col items-center justify-center w-20 h-20 rounded-full border-4 shrink-0",
                     timeLeft <= 5 ? "border-red-500 bg-red-500/20" :
                         timeLeft <= 10 ? "border-yellow-500 bg-yellow-500/20" :
                             "border-purple-500 bg-purple-500/20"
@@ -275,39 +297,41 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
 
                 {/* Player 2 (Opponent) */}
                 <div className={cn(
-                    "flex-1 p-4 rounded-xl border",
+                    "flex-1 p-3 md:p-4 rounded-xl border",
                     playerRole === "player2"
                         ? "border-green-500/50 bg-green-500/10"
                         : "border-blue-500/50 bg-blue-500/10"
                 )}>
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-neutral-400">Gegner</p>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs md:text-sm text-neutral-400">Gegner</p>
                             <p className={cn(
-                                "font-bold",
+                                "font-bold text-sm md:text-base truncate",
                                 playerRole === "player2" ? "text-green-400" : "text-blue-400"
                             )}>
                                 {opponentName}
                             </p>
                         </div>
-                        {renderLives(opponentLives)}
+                        <div className="flex items-center gap-2">
+                            {renderLives(opponentLives)}
+                            {opponentAnswered && (
+                                <span className="text-xs text-green-500">✓</span>
+                            )}
+                        </div>
                     </div>
-                    {opponentAnswered && (
-                        <p className="text-xs text-neutral-500 mt-2">✓ Beantwortet</p>
-                    )}
                 </div>
             </div>
 
             {/* Round indicator */}
             <div className="text-center">
-                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-white/10 text-sm text-neutral-300">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-black/40 border border-white/10 text-xs md:text-sm text-neutral-300">
                     ⚔️ Runde {game.round_number}
                 </span>
             </div>
 
             {/* Flag */}
-            <div className="flex items-center justify-center">
-                <div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
+            <div className="flex items-center justify-center px-2">
+                <div className="relative w-full max-w-xs md:max-w-md aspect-[3/2] flex items-center justify-center">
                     <img
                         src={currentCountry.flags?.svg || currentCountry.flags?.png || ""}
                         alt="Flagge"
@@ -317,7 +341,7 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
             </div>
 
             {/* Input Field */}
-            <div className="relative max-w-md mx-auto">
+            <div className="relative max-w-md mx-auto px-2 md:px-0">
                 <div className="relative">
                     <input
                         ref={inputRef}
@@ -334,7 +358,7 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
                         placeholder="Ländername eingeben..."
                         disabled={hasAnswered}
                         className={cn(
-                            "w-full px-6 py-4 text-lg rounded-xl border-2 bg-black/50 text-white placeholder-neutral-500 focus:outline-none transition-colors",
+                            "w-full px-4 py-3 md:px-6 md:py-4 text-base md:text-lg rounded-xl border-2 bg-black/50 text-white placeholder-neutral-500 focus:outline-none transition-colors",
                             hasAnswered && lastAnswer?.correct
                                 ? "border-green-500 bg-green-500/10"
                                 : hasAnswered && !lastAnswer?.correct
@@ -345,7 +369,7 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
                     {!hasAnswered && inputValue.trim() && (
                         <button
                             onClick={() => handleSubmit(inputValue)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                            className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 md:px-4 md:py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm md:text-base rounded-lg font-medium transition-colors"
                         >
                             Prüfen
                         </button>
@@ -367,7 +391,7 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
                                     onMouseDown={() => handleSuggestionClick(suggestion)}
                                     onMouseEnter={() => setSelectedIndex(index)}
                                     className={cn(
-                                        "w-full px-4 py-3 text-left text-white transition-colors border-b border-white/5 last:border-b-0",
+                                        "w-full px-4 py-2.5 md:py-3 text-left text-sm md:text-base text-white transition-colors border-b border-white/5 last:border-b-0",
                                         selectedIndex === index
                                             ? "bg-purple-600/30 text-purple-200"
                                             : "hover:bg-white/10"
@@ -387,16 +411,16 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-center"
+                        className="text-center px-2"
                     >
                         {lastAnswer.correct ? (
-                            <p className="text-2xl font-bold text-green-400">✓ Richtig!</p>
+                            <p className="text-xl md:text-2xl font-bold text-green-400">✓ Richtig!</p>
                         ) : lastAnswer.answer ? (
-                            <p className="text-xl text-red-400">
+                            <p className="text-base md:text-xl text-red-400">
                                 ✗ Falsch! Richtig war: <span className="font-bold text-white">{correctAnswer}</span>
                             </p>
                         ) : (
-                            <p className="text-xl text-amber-400">
+                            <p className="text-base md:text-xl text-amber-400">
                                 ⏰ Zeit abgelaufen! Es war: <span className="font-bold text-white">{correctAnswer}</span>
                             </p>
                         )}
@@ -410,9 +434,9 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-center p-4 rounded-xl bg-black/60 border border-white/10"
+                        className="text-center p-3 md:p-4 mx-2 md:mx-0 rounded-xl bg-black/60 border border-white/10"
                     >
-                        <p className="text-neutral-400">Warte auf nächste Runde...</p>
+                        <p className="text-sm md:text-base text-neutral-400">Warte auf nächste Runde...</p>
                     </motion.div>
                 )}
             </AnimatePresence>
