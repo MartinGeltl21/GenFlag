@@ -78,6 +78,15 @@ export async function joinDuelGame(
         return { success: false, error: "Spiel hat bereits begonnen" };
     }
 
+    // Check expiration (10 minutes)
+    const createdAt = new Date(game.created_at);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60;
+
+    if (diffMinutes > 10) {
+        return { success: false, error: "Dieser Einladungslink ist abgelaufen (Gültig für 10 Min.)" };
+    }
+
     if (game.player2_name) {
         return { success: false, error: "Spiel ist bereits voll" };
     }
