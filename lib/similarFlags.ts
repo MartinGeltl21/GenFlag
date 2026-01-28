@@ -13,7 +13,7 @@ export const similarFlagGroups: string[][] = [
     ["Romania", "Chad"],
 
     // Norwegian flag (identical)
-    ["Norway", "Bouvet Island"],
+    ["Norway", "Bouvet Island", "Svalbard and Jan Mayen"],
 
     // Note: We're being conservative here. Only truly identical flags are grouped.
 ];

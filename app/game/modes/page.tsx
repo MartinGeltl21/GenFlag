@@ -6,7 +6,7 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { IconInfinity, IconHeart, IconWorld, IconBrain } from "@tabler/icons-react";
+import { IconInfinity, IconHeart, IconWorld, IconBrain, IconSwords } from "@tabler/icons-react";
 
 interface GameMode {
     title: string;
@@ -44,6 +44,13 @@ const gameModes: GameMode[] = [
         href: "/game/expert",
         icon: <IconBrain className="h-10 w-10" />,
         gradient: "from-purple-500 to-violet-500",
+    },
+    {
+        title: "1v1 Duell",
+        description: "Fordere einen Freund heraus!",
+        href: "/game/duel",
+        icon: <IconSwords className="h-10 w-10" />,
+        gradient: "from-orange-500 to-amber-400",
     },
 ];
 
