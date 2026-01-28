@@ -229,40 +229,94 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
             animate={{ opacity: 1 }}
             className="space-y-4 md:space-y-8"
         >
-            {/* Mobile: Timer on top, centered */}
-            <div className="flex justify-center md:hidden">
-                <div className={cn(
-                    "flex flex-col items-center justify-center w-16 h-16 rounded-full border-4",
-                    timeLeft <= 5 ? "border-red-500 bg-red-500/20" :
-                        timeLeft <= 10 ? "border-yellow-500 bg-yellow-500/20" :
-                            "border-purple-500 bg-purple-500/20"
-                )}>
-                    <span className={cn(
-                        "text-xl font-bold",
-                        timeLeft <= 5 ? "text-red-400" :
-                            timeLeft <= 10 ? "text-yellow-400" :
-                                "text-purple-400"
+            {/* Mobile Layout: Timer + Both Players in a row */}
+            <div className="md:hidden space-y-3">
+                {/* Timer centered on top */}
+                <div className="flex justify-center">
+                    <div className={cn(
+                        "flex flex-col items-center justify-center w-14 h-14 rounded-full border-4",
+                        timeLeft <= 5 ? "border-red-500 bg-red-500/20" :
+                            timeLeft <= 10 ? "border-yellow-500 bg-yellow-500/20" :
+                                "border-purple-500 bg-purple-500/20"
                     )}>
-                        {timeLeft}
-                    </span>
-                    <span className="text-[10px] text-neutral-500">Sek</span>
+                        <span className={cn(
+                            "text-lg font-bold leading-none",
+                            timeLeft <= 5 ? "text-red-400" :
+                                timeLeft <= 10 ? "text-yellow-400" :
+                                    "text-purple-400"
+                        )}>
+                            {timeLeft}
+                        </span>
+                        <span className="text-[9px] text-neutral-500">Sek</span>
+                    </div>
+                </div>
+
+                {/* Both players in a symmetric row */}
+                <div className="grid grid-cols-2 gap-2 px-1">
+                    {/* Player 1 (Me) */}
+                    <div className={cn(
+                        "p-2.5 rounded-xl border",
+                        playerRole === "player1"
+                            ? "border-green-500/50 bg-green-500/10"
+                            : "border-blue-500/50 bg-blue-500/10"
+                    )}>
+                        <div className="flex flex-col items-center text-center gap-1">
+                            <p className="text-[10px] text-neutral-400">Du</p>
+                            <p className={cn(
+                                "font-bold text-sm truncate w-full",
+                                playerRole === "player1" ? "text-green-400" : "text-blue-400"
+                            )}>
+                                {myName}
+                            </p>
+                            <div className="flex items-center gap-0.5">
+                                {renderLives(myLives)}
+                                {hasAnswered && (
+                                    <span className="text-xs text-green-500 ml-1">✓</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Player 2 (Opponent) */}
+                    <div className={cn(
+                        "p-2.5 rounded-xl border",
+                        playerRole === "player2"
+                            ? "border-green-500/50 bg-green-500/10"
+                            : "border-blue-500/50 bg-blue-500/10"
+                    )}>
+                        <div className="flex flex-col items-center text-center gap-1">
+                            <p className="text-[10px] text-neutral-400">Gegner</p>
+                            <p className={cn(
+                                "font-bold text-sm truncate w-full",
+                                playerRole === "player2" ? "text-green-400" : "text-blue-400"
+                            )}>
+                                {opponentName}
+                            </p>
+                            <div className="flex items-center gap-0.5">
+                                {renderLives(opponentLives)}
+                                {opponentAnswered && (
+                                    <span className="text-xs text-green-500 ml-1">✓</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Header with players - stacked on mobile */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-4">
+            {/* Desktop Layout: Players with Timer between them */}
+            <div className="hidden md:flex items-center justify-between gap-4">
                 {/* Player 1 (Me) */}
                 <div className={cn(
-                    "flex-1 p-3 md:p-4 rounded-xl border",
+                    "flex-1 p-4 rounded-xl border",
                     playerRole === "player1"
                         ? "border-green-500/50 bg-green-500/10"
                         : "border-blue-500/50 bg-blue-500/10"
                 )}>
                     <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs md:text-sm text-neutral-400">Du</p>
+                            <p className="text-sm text-neutral-400">Du</p>
                             <p className={cn(
-                                "font-bold text-sm md:text-base truncate",
+                                "font-bold text-base truncate",
                                 playerRole === "player1" ? "text-green-400" : "text-blue-400"
                             )}>
                                 {myName}
@@ -277,9 +331,9 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
                     </div>
                 </div>
 
-                {/* Timer - hidden on mobile, shown on desktop */}
+                {/* Timer */}
                 <div className={cn(
-                    "hidden md:flex flex-col items-center justify-center w-20 h-20 rounded-full border-4 shrink-0",
+                    "flex flex-col items-center justify-center w-20 h-20 rounded-full border-4 shrink-0",
                     timeLeft <= 5 ? "border-red-500 bg-red-500/20" :
                         timeLeft <= 10 ? "border-yellow-500 bg-yellow-500/20" :
                             "border-purple-500 bg-purple-500/20"
@@ -297,16 +351,16 @@ export function DuelGameComponent({ game, playerRole, countries, onGameEnd }: Du
 
                 {/* Player 2 (Opponent) */}
                 <div className={cn(
-                    "flex-1 p-3 md:p-4 rounded-xl border",
+                    "flex-1 p-4 rounded-xl border",
                     playerRole === "player2"
                         ? "border-green-500/50 bg-green-500/10"
                         : "border-blue-500/50 bg-blue-500/10"
                 )}>
                     <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs md:text-sm text-neutral-400">Gegner</p>
+                            <p className="text-sm text-neutral-400">Gegner</p>
                             <p className={cn(
-                                "font-bold text-sm md:text-base truncate",
+                                "font-bold text-base truncate",
                                 playerRole === "player2" ? "text-green-400" : "text-blue-400"
                             )}>
                                 {opponentName}
