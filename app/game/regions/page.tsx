@@ -254,7 +254,7 @@ export default function RegionsPage() {
     const currentRegion = regions.find((r) => r.id === selectedRegion);
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden dark:bg-black">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row dark:bg-black">
             <GridBackground className="pointer-events-none absolute inset-0" />
 
             <Sidebar>
@@ -289,7 +289,7 @@ export default function RegionsPage() {
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden dark:bg-black px-4">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-start overflow-y-auto dark:bg-black px-4 py-6 md:justify-center md:py-0">
                 <div className="w-full max-w-6xl mx-auto">
                     <AnimatePresence mode="wait">
                         {showResumeDialog ? (

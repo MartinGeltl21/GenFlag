@@ -92,7 +92,7 @@ export default function DuelCreatePage() {
     ];
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden dark:bg-black">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row dark:bg-black">
             <GridBackground className="pointer-events-none absolute inset-0" />
 
             <Sidebar>
@@ -127,7 +127,7 @@ export default function DuelCreatePage() {
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-y-auto dark:bg-black px-3 py-4 md:px-4 md:py-0">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-start overflow-y-auto dark:bg-black px-3 py-4 md:justify-center md:px-4 md:py-0">
                 <div className="w-full max-w-lg mx-auto">
                     <div className="rounded-2xl border border-white/10 bg-black p-5 md:p-8 lg:p-12 backdrop-blur-xl shadow-2xl">
                         <motion.div

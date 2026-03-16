@@ -336,7 +336,7 @@ export default function ExpertPage() {
     ];
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden dark:bg-black">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row dark:bg-black">
             <GridBackground className="pointer-events-none absolute inset-0" />
 
             <Sidebar>
@@ -371,7 +371,7 @@ export default function ExpertPage() {
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden dark:bg-black px-4">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-start overflow-y-auto dark:bg-black px-4 py-6 md:justify-center md:py-0">
                 <div className="w-full max-w-6xl mx-auto">
                     <div className="rounded-2xl border border-white/10 bg-black p-8 md:p-12 backdrop-blur-xl shadow-2xl pb-24">
                         <AnimatePresence mode="wait">
@@ -491,7 +491,7 @@ export default function ExpertPage() {
                                                 placeholder="Ländername eingeben..."
                                                 disabled={isAnswered}
                                                 className={cn(
-                                                    "w-full px-6 py-4 text-lg rounded-xl border-2 bg-black/50 text-white placeholder-neutral-500 focus:outline-none transition-colors",
+													"w-full rounded-xl border-2 bg-black/50 px-6 py-4 text-lg text-white placeholder-neutral-500 transition-colors focus:outline-none sm:pr-40",
                                                     isAnswered && isCorrect
                                                         ? "border-green-500 bg-green-500/10"
                                                         : isAnswered && !isCorrect
@@ -499,8 +499,8 @@ export default function ExpertPage() {
                                                             : "border-white/20 focus:border-purple-500"
                                                 )}
                                             />
-                                            {!isAnswered && (
-                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+											{!isAnswered && (
+												<div className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-2 sm:flex">
                                                     {inputValue.trim() && (
                                                         <button
                                                             onClick={() => handleSubmit(inputValue)}
@@ -519,6 +519,29 @@ export default function ExpertPage() {
                                                 </div>
                                             )}
                                         </div>
+										{!isAnswered && (
+											<div className="mt-3 flex items-center gap-2 sm:hidden">
+												<button
+													onClick={() => handleSubmit(inputValue)}
+													disabled={!inputValue.trim()}
+													className={cn(
+														"flex-1 rounded-lg px-4 py-2.5 font-medium transition-colors",
+														inputValue.trim()
+															? "bg-purple-600 text-white hover:bg-purple-700"
+															: "bg-neutral-700 text-neutral-400"
+													)}
+												>
+													Prüfen
+												</button>
+												<button
+													onClick={handleSkip}
+													className="flex h-[42px] w-[42px] items-center justify-center rounded-lg bg-neutral-700 text-white transition-colors hover:bg-neutral-600"
+													title="Überspringen (ESC)"
+												>
+													<IconPlayerSkipForward className="h-4 w-4" />
+												</button>
+											</div>
+										)}
 
 
 
