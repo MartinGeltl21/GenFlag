@@ -38,35 +38,35 @@ export const ThreeDMarquee = ({
 	return (
 		<div
 			className={cn(
-				"block h-dvh w-full overflow-hidden",
+				"block h-full min-h-full w-full overflow-hidden",
 				className,
 			)}
 		>
 			<div className="flex size-full items-center justify-center">
 				<div className={cn(
-					"shrink-0",
+					"relative shrink-0",
 					isMobile
-						? "size-[1600px] scale-50"
-						: "size-[2600px] scale-75 md:scale-100 xl:scale-[1.15]"
+						? "size-[1400px] scale-[0.62]"
+						: "size-[2200px] scale-[0.8] md:scale-90 xl:scale-100"
 				)}>
 					<div
 						style={{
-							// Simplified 2D transform on mobile, full 3D on desktop
+							// Center the marquee in the viewport to avoid mobile offset drift.
 							transform: isMobile
-								? "rotate(-45deg)"
-								: "rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
+								? "translate(-50%, -50%) rotate(-38deg)"
+								: "translate(-50%, -50%) rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
 							// GPU acceleration hints
 							willChange: "transform",
 							backfaceVisibility: "hidden",
 						}}
-						className="relative top-[40rem] right-[60%] grid size-full origin-top-left grid-cols-4 gap-8 transform-3d"
+						className="absolute left-1/2 top-1/2 grid size-full origin-center grid-cols-4 gap-6 transform-3d md:gap-8"
 					>
 						{chunks.map((subarray, colIndex) => (
 							<motion.div
-								animate={{ y: colIndex % 2 === 0 ? 100 : -100 }}
+								animate={{ y: colIndex % 2 === 0 ? (isMobile ? 60 : 100) : (isMobile ? -60 : -100) }}
 								transition={{
 									// Slower animation on mobile = less frames to render
-									duration: isMobile ? 25 : (colIndex % 2 === 0 ? 10 : 15),
+									duration: isMobile ? 30 : (colIndex % 2 === 0 ? 10 : 15),
 									repeat: Infinity,
 									repeatType: "reverse",
 								}}

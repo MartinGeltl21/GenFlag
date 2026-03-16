@@ -67,7 +67,7 @@ export default function Home() {
 	];
 
 	return (
-		<div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden bg-black">
+		<div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row bg-black">
 			{/* Sidebar */}
 			<Sidebar>
 				<SidebarBody className="justify-between gap-10 bg-black/60 backdrop-blur-xl border-r border-white/10">
@@ -95,7 +95,7 @@ export default function Home() {
 			</Sidebar>
 
 			{/* Main Content */}
-			<div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-hidden bg-black">
+			<div className="relative z-10 flex flex-1 flex-col items-center justify-start overflow-y-auto bg-black pt-4 md:justify-center md:pt-0">
 				{/* Dots Background */}
 				<div
 					className="pointer-events-none absolute inset-0 z-0"
@@ -108,7 +108,7 @@ export default function Home() {
 				<ThreeDMarquee className="pointer-events-none absolute inset-0 z-[1] h-full w-full" images={images} />
 
 				{/* Hero Section */}
-				<section className="relative z-20 w-full px-4 py-24 md:py-32">
+				<section className="relative z-20 w-full px-4 py-16 sm:py-20 md:py-32">
 					<div className="mx-auto max-w-6xl">
 						<div className="flex flex-col items-center gap-8 text-center">
 							{/* Badge */}
@@ -122,7 +122,7 @@ export default function Home() {
 							</div>
 
 							{/* Heading */}
-							<h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl md:text-7xl lg:text-8xl">
+							<h1 className="text-3xl font-bold tracking-tight text-white sm:text-5xl md:text-7xl lg:text-8xl">
 								{"Das ultimative".split(" ").map((word, index) => (
 									<motion.span
 										key={index}
@@ -188,15 +188,15 @@ export default function Home() {
 									duration: 0.3,
 									delay: 1,
 								}}
-								className="flex flex-wrap items-center justify-center gap-4"
+								className="flex w-full max-w-sm flex-col items-stretch justify-center gap-3 sm:w-auto sm:max-w-none sm:flex-row sm:items-center sm:gap-4"
 							>
-								<Button asChild size="lg" className="group">
+								<Button asChild size="lg" className="group w-full sm:w-auto">
 									<Link href="/game/modes">
 										Jetzt spielen
 										<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 									</Link>
 								</Button>
-								<Button asChild variant="outline" size="lg">
+								<Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
 									<Link href="/flaggen">Flaggen durchstöbern</Link>
 								</Button>
 							</motion.div>
@@ -215,7 +215,7 @@ export default function Home() {
 									duration: 0.3,
 									delay: 1.2,
 								}}
-								className="mt-16 flex flex-wrap items-center justify-center gap-8 text-center"
+								className="mt-12 flex flex-wrap items-center justify-center gap-6 text-center md:mt-16 md:gap-8"
 							>
 								<div>
 									<div className="text-3xl font-bold text-white">195+</div>

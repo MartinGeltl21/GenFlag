@@ -120,7 +120,7 @@ export default function HighscorePage() {
     const currentModeInfo = getModeInfo(gameMode);
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden bg-zinc-950">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row bg-zinc-950">
             {/* Simple Noise Background */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
@@ -156,7 +156,7 @@ export default function HighscorePage() {
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col overflow-y-auto w-full p-6 md:p-12">
+            <div className="relative z-10 flex flex-1 flex-col overflow-y-auto w-full p-6 md:p-12">
                 <div className="max-w-4xl mx-auto w-full space-y-8 pb-24">
 
                     {/* Header */}
@@ -224,10 +224,10 @@ export default function HighscorePage() {
                         ) : (
                             <div className="divide-y divide-white/5">
                                 {/* Header Row */}
-                                <div className="grid grid-cols-12 gap-4 px-6 py-4 text-zinc-500 text-sm font-medium bg-black/20">
-                                    <div className="col-span-1">#</div>
-                                    <div className="col-span-7">Spieler</div>
-                                    <div className="col-span-4 text-right">Punkte</div>
+                                <div className="grid grid-cols-[2rem,1fr,auto] gap-3 bg-black/20 px-4 py-3 text-xs font-medium text-zinc-500 md:px-6 md:py-4 md:text-sm">
+                                    <div>#</div>
+                                    <div>Spieler</div>
+                                    <div className="text-right">Punkte</div>
                                 </div>
 
                                 {/* Data Rows */}
@@ -237,18 +237,18 @@ export default function HighscorePage() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className={`grid grid-cols-12 gap-4 px-6 py-4 items-center ${index < 3 ? 'bg-gradient-to-r from-amber-500/5 to-transparent' : 'hover:bg-white/5'} transition-colors`}
+                                        className={`grid grid-cols-[2rem,1fr,auto] items-center gap-3 px-4 py-3 transition-colors md:px-6 md:py-4 ${index < 3 ? 'bg-gradient-to-r from-amber-500/5 to-transparent' : 'hover:bg-white/5'}`}
                                     >
-                                        <div className="col-span-1 flex items-center">
+                                        <div className="flex items-center">
                                             {getMedalIcon(index)}
                                         </div>
-                                        <div className="col-span-7">
-                                            <span className={`font-medium ${index < 3 ? 'text-white' : 'text-zinc-300'}`}>
+                                        <div className="min-w-0">
+                                            <span className={`block truncate font-medium ${index < 3 ? 'text-white' : 'text-zinc-300'}`}>
                                                 {entry.username}
                                             </span>
                                         </div>
-                                        <div className="col-span-4 text-right">
-                                            <span className={`font-bold text-lg ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-zinc-300' : index === 2 ? 'text-amber-600' : 'text-zinc-400'}`}>
+                                        <div className="text-right">
+                                            <span className={`text-base font-bold md:text-lg ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-zinc-300' : index === 2 ? 'text-amber-600' : 'text-zinc-400'}`}>
                                                 {entry.score}
                                             </span>
                                         </div>

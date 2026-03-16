@@ -79,7 +79,7 @@ export default function ModesPage() {
     ];
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden dark:bg-black bg-black">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto bg-black md:flex-row dark:bg-black">
             {/* Dots Background */}
             <div
                 className={cn(
@@ -124,12 +124,12 @@ export default function ModesPage() {
             </Sidebar>
 
             {/* Main Content */}
-            <div className="relative z-10 flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-12">
-                <div className="w-full max-w-4xl mx-auto bg-black/80 backdrop-blur-xl rounded-3xl border border-white/10 p-8 md:p-12">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-start overflow-y-auto px-4 py-8 md:justify-center md:py-12">
+                <div className="mx-auto w-full max-w-4xl rounded-3xl border border-white/10 bg-black/80 p-5 backdrop-blur-xl sm:p-6 md:p-12">
                     <motion.h1
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-4xl md:text-5xl font-bold text-white text-center mb-4"
+                        className="mb-4 text-center text-3xl font-bold text-white md:text-5xl"
                     >
                         Wähle deinen Spielmodus
                     </motion.h1>
@@ -137,7 +137,7 @@ export default function ModesPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="text-neutral-400 text-center mb-12 text-lg"
+                        className="mb-8 text-center text-base text-neutral-400 md:mb-12 md:text-lg"
                     >
                         Vom entspannten Training bis zur ultimativen Herausforderung
                     </motion.p>
@@ -150,8 +150,8 @@ export default function ModesPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 * (index + 1) }}
                             >
-                                <Link href={mode.href}>
-                                    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-6 backdrop-blur-xl transition-all duration-300 hover:border-white/30 hover:bg-black/70 hover:scale-[1.02]">
+                                <Link href={mode.href} className="block">
+                                    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] hover:border-white/30 hover:bg-black/70 md:p-6">
                                         {/* Gradient Background */}
                                         <div
                                             className={cn(

@@ -1,9 +1,8 @@
 "use client";
 import { cn } from "@/lib/utils";
-import React, { useState, createContext, useContext } from "react";
+import React, { useState, createContext, useContext, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { IconMenu2, IconX } from "@tabler/icons-react";
-import { AuthModal } from "@/components/auth/auth-modal";
 
 interface Links {
 	label: string;
@@ -112,20 +111,34 @@ export const MobileSidebar = ({
 	...props
 }: React.ComponentProps<"div">) => {
 	const { open, setOpen } = useSidebar();
+	useEffect(() => {
+		if (open) {
+			document.body.style.overflow = "hidden";
+		} else {
+			document.body.style.overflow = "";
+		}
+		return () => {
+			document.body.style.overflow = "";
+		};
+	}, [open]);
 
 	return (
 		<>
 			<div
 				className={cn(
-					"h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-black/60 backdrop-blur-xl border-b border-white/10 w-full",
+					"flex min-h-14 w-full flex-row items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur-xl md:hidden",
 				)}
 				{...props}
 			>
 				<div className="flex justify-end z-20 w-full">
-					<IconMenu2
-						className="text-neutral-800 dark:text-neutral-200"
+					<button
+						type="button"
+						aria-label="Menü öffnen"
+						className="inline-flex h-10 w-10 items-center justify-center rounded-md text-white hover:bg-white/10"
 						onClick={() => setOpen(!open)}
-					/>
+					>
+						<IconMenu2 className="h-6 w-6" />
+					</button>
 				</div>
 				<AnimatePresence>
 					{open && (
@@ -137,17 +150,16 @@ export const MobileSidebar = ({
 								duration: 0.3,
 								ease: "easeInOut",
 							}}
-							className={cn(
-								"fixed h-full w-full inset-0 bg-white dark:bg-neutral-900 p-10 z-[100] flex flex-col justify-between",
-								className,
-							)}
+							className={cn("fixed inset-0 z-[100] flex max-h-[100dvh] w-full flex-col justify-between overflow-y-auto bg-black/95 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] backdrop-blur-xl", className)}
 						>
-							<div
-								className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200"
+							<button
+								type="button"
+								aria-label="Menü schließen"
+								className="absolute right-4 top-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-md text-white hover:bg-white/10"
 								onClick={() => setOpen(!open)}
 							>
-								<IconX />
-							</div>
+								<IconX className="h-6 w-6" />
+							</button>
 							{children}
 						</motion.div>
 					)}
@@ -164,8 +176,8 @@ export const SidebarLink = ({
 }: {
 	link: Links;
 	className?: string;
-}) => {
-	const { open, animate } = useSidebar();
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
+	const { open, animate, setOpen } = useSidebar();
 
 	return (
 		<a
@@ -175,6 +187,12 @@ export const SidebarLink = ({
 				className,
 			)}
 			{...props}
+			onClick={(event) => {
+				props.onClick?.(event);
+				if (!event.defaultPrevented) {
+					setOpen(false);
+				}
+			}}
 		>
 			{link.icon}
 			<motion.span

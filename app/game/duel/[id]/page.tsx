@@ -344,7 +344,7 @@ export default function DuelGamePage({ params }: { params: Promise<{ id: string 
     };
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden dark:bg-black">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row dark:bg-black">
             <GridBackground className="pointer-events-none absolute inset-0" />
 
             <Sidebar>
@@ -379,7 +379,7 @@ export default function DuelGamePage({ params }: { params: Promise<{ id: string 
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col items-center justify-center overflow-y-auto dark:bg-black px-2 py-3 md:px-4 md:py-0">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-start overflow-y-auto dark:bg-black px-2 py-3 md:justify-center md:px-4 md:py-0">
                 <div className="w-full max-w-6xl mx-auto">
                     <div className="rounded-2xl border border-white/10 bg-black p-4 md:p-8 lg:p-12 backdrop-blur-xl shadow-2xl">
                         {renderContent()}

@@ -150,7 +150,7 @@ export default function ProfilePage() {
         .slice(0, 5);
 
     return (
-        <div className="relative flex flex-col md:flex-row h-dvh w-full overflow-hidden bg-zinc-950">
+        <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto md:flex-row bg-zinc-950">
             {/* Simple Noise Background */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
@@ -186,7 +186,7 @@ export default function ProfilePage() {
                 </SidebarBody>
             </Sidebar>
 
-            <div className="relative z-12 flex flex-1 flex-col overflow-y-auto w-full p-6 md:p-12">
+            <div className="relative z-10 flex flex-1 flex-col overflow-y-auto w-full p-6 md:p-12">
                 <div className="max-w-6xl mx-auto w-full space-y-12 pb-24">
 
                     {/* Header Section */}
@@ -196,7 +196,7 @@ export default function ProfilePage() {
                                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Dein Profil</h1>
                                 <p className="text-zinc-400 text-lg">Verfolge deinen Fortschritt und verbessere dein Wissen.</p>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
                                 {isEditingUsername ? (
                                     <div className="flex items-center gap-2">
                                         <div className="relative">
@@ -230,7 +230,7 @@ export default function ProfilePage() {
                                 ) : (
                                     <div
                                         onClick={() => { setIsEditingUsername(true); setUpdateError(null); }}
-                                        className="group cursor-pointer relative min-w-[140px] px-5 py-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-zinc-300 text-sm flex justify-center items-center transition-all"
+                                        className="group relative flex min-w-[140px] cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-zinc-300 transition-all hover:bg-white/10"
                                     >
                                         <span>{username}</span>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 opacity-50 group-hover:opacity-100 transition-opacity"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
@@ -238,7 +238,7 @@ export default function ProfilePage() {
                                 )}
                                 <Link
                                     href="/highscore"
-                                    className="flex items-center justify-center gap-2 min-w-[140px] px-5 py-2 bg-zinc-800/80 hover:bg-zinc-700/80 border border-white/10 hover:border-amber-500/30 rounded-full text-zinc-300 hover:text-amber-400 text-sm font-medium transition-all"
+                                    className="flex min-w-[140px] items-center justify-center gap-2 rounded-full border border-white/10 bg-zinc-800/80 px-5 py-2 text-sm font-medium text-zinc-300 transition-all hover:border-amber-500/30 hover:bg-zinc-700/80 hover:text-amber-400"
                                 >
                                     <IconTrophy className="w-4 h-4" />
                                     <span>Bestenliste</span>

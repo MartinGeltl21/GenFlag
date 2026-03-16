@@ -118,7 +118,7 @@ export default function FlaggenPage() {
 	];
 
 	return (
-		<div className="relative flex flex-col md:flex-row min-h-dvh w-full bg-black">
+		<div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-black md:flex-row">
 			{/* Sidebar */}
 			<Sidebar>
 				<SidebarBody className="justify-between gap-10 bg-black/60 backdrop-blur-xl border-r border-white/10">
@@ -153,7 +153,7 @@ export default function FlaggenPage() {
 			</Sidebar>
 
 			{/* Main Content */}
-			<div ref={contentRef} className="relative z-12 flex flex-1 flex-col overflow-y-auto bg-black px-4 py-24 md:py-32">
+			<div ref={contentRef} className="relative z-10 flex flex-1 flex-col overflow-y-auto bg-black px-4 py-16 md:py-24">
 				<div
 					className={cn(
 						"pointer-events-none absolute inset-0 z-0 bg-black",
@@ -216,13 +216,13 @@ export default function FlaggenPage() {
 
 				{/* Scroll-to-top Button */}
 				{showScrollToTop && (
-					<div className="fixed bottom-8 right-6 md:right-16 lg:right-24 xl:right-32 2xl:right-40 z-50">
+					<div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-50 md:bottom-8 md:right-16 lg:right-24 xl:right-32 2xl:right-40">
 						<Button
 							variant="outline"
 							size="icon"
 							aria-label="Nach oben scrollen"
 							onClick={scrollToTop}
-							className="bg-black/90 border-white/30 hover:bg-black hover:border-white/50 backdrop-blur-md shadow-lg transition-all w-14 h-14"
+							className="h-12 w-12 bg-black/90 border-white/30 backdrop-blur-md shadow-lg transition-all hover:bg-black hover:border-white/50 md:h-14 md:w-14"
 						>
 							<ArrowUp className="h-6 w-6 text-white" />
 						</Button>
