@@ -7,9 +7,10 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
-import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
+import { saveGameProgress, loadGameProgress, clearGameProgress, GameProgress } from "@/lib/gameProgress";
+import { QuestionTimer, QUESTION_DURATION } from "@/components/game/question-timer";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward } from "@tabler/icons-react";
+import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconPlayerSkipForward, IconTrophy } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -37,12 +38,22 @@ export default function ExpertPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isSkipped, setIsSkipped] = useState(false);
     const [showResumeDialog, setShowResumeDialog] = useState(false);
-    const [savedProgress, setSavedProgress] = useState<{ score: number; total: number } | null>(null);
+    const [savedProgress, setSavedProgress] = useState<GameProgress | null>(null);
+    const [questionKey, setQuestionKey] = useState(0);
+    const [resumeRemaining, setResumeRemaining] = useState<number | undefined>(undefined);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const flagHistory = useRef(new FlagHistory(40));
     const hasCheckedProgress = useRef(false);
+    // Track the latest score/total in refs so the (memoized) loadNewQuestion
+    // can persist them without going stale (Issue #15).
+    const scoreRef = useRef(0);
+    const totalRef = useRef(0);
+    const remainingRef = useRef(QUESTION_DURATION);
+    const lastPersistRef = useRef(QUESTION_DURATION);
+    const currentCodeRef = useRef<string>("");
+    const correctAnswerRef = useRef<string>("");
 
     // Get all German country names for autocomplete
     const allGermanNames = useMemo(() => {
@@ -81,7 +92,7 @@ export default function ExpertPage() {
 
             const progress = await loadGameProgress("expert");
             if (progress && progress.score > 0) {
-                setSavedProgress({ score: progress.score, total: progress.total || progress.score });
+                setSavedProgress(progress);
                 setShowResumeDialog(true);
                 // Restore flag history if available
                 if (progress.flagHistory) {
@@ -91,6 +102,10 @@ export default function ExpertPage() {
         };
         checkProgress();
     }, []);
+
+    // Keep refs in sync so the memoized loadNewQuestion can persist fresh values.
+    useEffect(() => { scoreRef.current = score; }, [score]);
+    useEffect(() => { totalRef.current = total; }, [total]);
 
     useEffect(() => {
         if (countries.length > 0 && !currentCountry && !showResumeDialog) {
@@ -132,9 +147,59 @@ export default function ExpertPage() {
         setShowSuggestions(false);
         setSelectedIndex(-1);
 
+        // Reset the question timer (Issue #14) and persist the new question (Issue #15)
+        currentCodeRef.current = randomCountry.cca2;
+        correctAnswerRef.current = correctGermanName;
+        remainingRef.current = QUESTION_DURATION;
+        lastPersistRef.current = QUESTION_DURATION;
+        setResumeRemaining(undefined);
+        setQuestionKey((k) => k + 1);
+        saveGameProgress("expert", {
+            score: scoreRef.current,
+            total: totalRef.current,
+            flagHistory: flagHistory.current.getHistory(),
+            currentFlag: randomCountry.cca2,
+            correctAnswer: correctGermanName,
+            remainingTime: QUESTION_DURATION,
+        });
+
         // Focus input
         setTimeout(() => inputRef.current?.focus(), 100);
     }, [countries]);
+
+    // Persist the dwindling timer (throttled) so reloading can't reset it (Issue #15)
+    const persistRemaining = useCallback((r: number) => {
+        remainingRef.current = r;
+        if (lastPersistRef.current - r >= 2) {
+            lastPersistRef.current = r;
+            saveGameProgress("expert", {
+                score: scoreRef.current,
+                total: totalRef.current,
+                flagHistory: flagHistory.current.getHistory(),
+                currentFlag: currentCodeRef.current,
+                correctAnswer: correctAnswerRef.current,
+                remainingTime: Math.ceil(r),
+            });
+        }
+    }, []);
+
+    // Timeout counts as a wrong answer → game over (Issue #14)
+    const handleTimeout = useCallback(() => {
+        if (isAnswered) return;
+        if (autoAdvanceTimerRef.current) {
+            clearTimeout(autoAdvanceTimerRef.current);
+            autoAdvanceTimerRef.current = null;
+        }
+        setIsAnswered(true);
+        setIsCorrect(false);
+        setTotal((prev) => prev + 1);
+        setShowSuggestions(false);
+        saveFlagResult(currentCodeRef.current, false);
+        setGameOver(true);
+        clearGameProgress("expert");
+        saveHighscore(scoreRef.current);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAnswered]);
 
     // Global Enter listener when answered (for manual skip to next question)
     useEffect(() => {
@@ -232,6 +297,8 @@ export default function ExpertPage() {
     const handleRestart = () => {
         setScore(0);
         setTotal(0);
+        scoreRef.current = 0;
+        totalRef.current = 0;
         setGameOver(false);
         setRank(null);
         setIsSkipped(false);
@@ -243,7 +310,32 @@ export default function ExpertPage() {
     const handleResume = () => {
         if (savedProgress) {
             setScore(savedProgress.score);
-            setTotal(savedProgress.total);
+            setTotal(savedProgress.total ?? savedProgress.score);
+            scoreRef.current = savedProgress.score;
+            totalRef.current = savedProgress.total ?? savedProgress.score;
+
+            // Restore the exact flag the player stopped at (Issue #15)
+            const country = savedProgress.currentFlag
+                ? countries.find((c) => c.cca2 === savedProgress.currentFlag)
+                : undefined;
+            if (country && savedProgress.correctAnswer) {
+                const remaining = savedProgress.remainingTime ?? QUESTION_DURATION;
+                setCurrentCountry(country);
+                setCorrectAnswer(savedProgress.correctAnswer);
+                currentCodeRef.current = country.cca2;
+                correctAnswerRef.current = savedProgress.correctAnswer;
+                setInputValue("");
+                setIsAnswered(false);
+                setIsCorrect(false);
+                setGameOver(false);
+                remainingRef.current = remaining;
+                lastPersistRef.current = remaining;
+                setResumeRemaining(remaining);
+                setQuestionKey((k) => k + 1);
+                setShowResumeDialog(false);
+                setTimeout(() => inputRef.current?.focus(), 100);
+                return;
+            }
         }
         setShowResumeDialog(false);
         loadNewQuestion();
@@ -273,6 +365,8 @@ export default function ExpertPage() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (isAnswered) return;
+
         // Tab to autocomplete (only fills in the text, does not submit)
         if (e.key === "Tab" && suggestions.length > 0) {
             e.preventDefault();
@@ -280,6 +374,22 @@ export default function ExpertPage() {
             setInputValue(suggestionToUse);
             setShowSuggestions(false);
             setSelectedIndex(-1);
+            return;
+        }
+
+        // Enter / Strg+Enter prüft das Ergebnis (Issue #12)
+        if (e.key === "Enter") {
+            e.preventDefault();
+            // Strg/Cmd+Enter prüft immer den getippten Text direkt.
+            if (e.ctrlKey || e.metaKey) {
+                if (inputValue.trim()) handleSubmit(inputValue);
+                return;
+            }
+            // Ist ein Vorschlag markiert, wird dieser geprüft, sonst der getippte Text.
+            const answer = selectedIndex >= 0 && suggestions[selectedIndex]
+                ? suggestions[selectedIndex]
+                : inputValue;
+            if (answer.trim()) handleSubmit(answer);
             return;
         }
 
@@ -437,6 +547,13 @@ export default function ExpertPage() {
                                             Nochmal spielen
                                         </button>
                                         <Link
+                                            href="/highscore?mode=expert"
+                                            className="inline-flex items-center justify-center gap-2 text-white bg-amber-600 hover:bg-amber-700 focus:ring-4 focus:ring-amber-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-amber-500/20 transition-all"
+                                        >
+                                            <IconTrophy className="h-5 w-5" />
+                                            Bestenliste
+                                        </Link>
+                                        <Link
                                             href="/game/modes"
                                             className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
                                         >
@@ -461,6 +578,15 @@ export default function ExpertPage() {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Timer (Issue #14) */}
+                                    <QuestionTimer
+                                        resetKey={questionKey}
+                                        isActive={!isAnswered}
+                                        startFrom={resumeRemaining}
+                                        onTimeout={handleTimeout}
+                                        onTick={persistRemaining}
+                                    />
 
                                     {/* Flag */}
                                     <div className="flex items-center justify-center">

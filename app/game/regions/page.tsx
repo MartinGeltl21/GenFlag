@@ -6,7 +6,8 @@ import { GridBackground } from "@/components/ui/grid-background";
 import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
-import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
+import { saveGameProgress, loadGameProgress, clearGameProgress, GameProgress } from "@/lib/gameProgress";
+import { QuestionTimer, QUESTION_DURATION } from "@/components/game/question-timer";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -41,8 +42,14 @@ export default function RegionsPage() {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showResumeDialog, setShowResumeDialog] = useState(false);
-    const [savedProgress, setSavedProgress] = useState<{ score: number; total: number; selectedRegion: string } | null>(null);
+    const [savedProgress, setSavedProgress] = useState<GameProgress | null>(null);
+    const [timedOut, setTimedOut] = useState(false);
+    const [questionKey, setQuestionKey] = useState(0);
+    const [resumeRemaining, setResumeRemaining] = useState<number | undefined>(undefined);
     const hasCheckedProgress = useRef(false);
+    const remainingRef = useRef(QUESTION_DURATION);
+    const lastPersistRef = useRef(QUESTION_DURATION);
+    const selectedRegionRef = useRef<string>("");
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -71,11 +78,7 @@ export default function RegionsPage() {
 
             const progress = await loadGameProgress("regions");
             if (progress && progress.score > 0 && progress.selectedRegion) {
-                setSavedProgress({
-                    score: progress.score,
-                    total: progress.total || progress.score,
-                    selectedRegion: progress.selectedRegion
-                });
+                setSavedProgress(progress);
                 setShowResumeDialog(true);
             }
         };
@@ -86,6 +89,7 @@ export default function RegionsPage() {
         const regionCountries = allCountries.filter((c) => c.region === regionId);
         setCountries(regionCountries);
         setSelectedRegion(regionId);
+        selectedRegionRef.current = regionId;
         setScore(0);
         setTotal(0);
         setCurrentCountry(null);
@@ -147,6 +151,60 @@ export default function RegionsPage() {
         setSelectedAnswer(null);
         setCorrectAnswer(correctGermanName);
         setIsAnswered(false);
+        setTimedOut(false);
+
+        // Reset the timer (Issue #14) and persist the new question (Issue #15)
+        remainingRef.current = QUESTION_DURATION;
+        lastPersistRef.current = QUESTION_DURATION;
+        setResumeRemaining(undefined);
+        setQuestionKey((k) => k + 1);
+        saveGameProgress("regions", {
+            score,
+            total,
+            selectedRegion: selectedRegionRef.current,
+            currentFlag: randomCountry.cca2,
+            options: shuffledOptions,
+            correctAnswer: correctGermanName,
+            remainingTime: QUESTION_DURATION,
+        });
+    };
+
+    // Persist the dwindling timer (throttled) so reloading can't reset it (Issue #15)
+    const persistRemaining = (r: number) => {
+        remainingRef.current = r;
+        if (isAnswered) return;
+        if (lastPersistRef.current - r >= 2) {
+            lastPersistRef.current = r;
+            saveGameProgress("regions", {
+                score,
+                total,
+                selectedRegion: selectedRegionRef.current,
+                currentFlag: currentCountry?.cca2,
+                options,
+                correctAnswer: correctAnswer ?? undefined,
+                remainingTime: Math.ceil(r),
+            });
+        }
+    };
+
+    // Timeout counts as a wrong answer (Issue #14)
+    const handleTimeout = () => {
+        if (isAnswered) return;
+        setIsAnswered(true);
+        setSelectedAnswer(null);
+        setTimedOut(true);
+        const newTotal = total + 1;
+        setTotal(newTotal);
+        saveFlagResult(currentCountry?.cca2 || "", false);
+        saveGameProgress("regions", {
+            score,
+            total: newTotal,
+            selectedRegion: selectedRegionRef.current,
+            currentFlag: currentCountry?.cca2,
+            options,
+            correctAnswer: correctAnswer ?? undefined,
+            remainingTime: 0,
+        });
     };
 
     const handleAnswer = async (answer: string) => {
@@ -182,22 +240,47 @@ export default function RegionsPage() {
 
     const handleBackToSelection = () => {
         setSelectedRegion(null);
+        selectedRegionRef.current = "";
         setCurrentCountry(null);
         setScore(0);
         setTotal(0);
+        setTimedOut(false);
         clearGameProgress("regions");
     };
 
     const handleResume = () => {
-        if (savedProgress) {
+        if (savedProgress && savedProgress.selectedRegion) {
             setScore(savedProgress.score);
-            setTotal(savedProgress.total);
+            setTotal(savedProgress.total ?? savedProgress.score);
             const regionCountries = allCountries.filter((c) => c.region === savedProgress.selectedRegion);
             setCountries(regionCountries);
             setSelectedRegion(savedProgress.selectedRegion);
+            selectedRegionRef.current = savedProgress.selectedRegion;
+
+            // Restore the exact flag the player stopped at (Issue #15)
+            const country = savedProgress.currentFlag
+                ? allCountries.find((c) => c.cca2 === savedProgress.currentFlag)
+                : undefined;
+            if (country && savedProgress.options && savedProgress.correctAnswer) {
+                const remaining = savedProgress.remainingTime ?? QUESTION_DURATION;
+                setCurrentCountry(country);
+                setOptions(savedProgress.options);
+                setCorrectAnswer(savedProgress.correctAnswer);
+                setSelectedAnswer(null);
+                setIsAnswered(false);
+                setTimedOut(false);
+                remainingRef.current = remaining;
+                lastPersistRef.current = remaining;
+                setResumeRemaining(remaining);
+                setQuestionKey((k) => k + 1);
+                setShowResumeDialog(false);
+                return;
+            }
+            setShowResumeDialog(false);
+            setTimeout(() => loadNewQuestion(regionCountries), 0);
+            return;
         }
         setShowResumeDialog(false);
-        setTimeout(() => loadNewQuestion(), 0);
     };
 
     const handleNewGame = () => {
@@ -392,6 +475,15 @@ export default function RegionsPage() {
                                         </div>
                                     </div>
 
+                                    {/* Timer (Issue #14) */}
+                                    <QuestionTimer
+                                        resetKey={questionKey}
+                                        isActive={!isAnswered}
+                                        startFrom={resumeRemaining}
+                                        onTimeout={handleTimeout}
+                                        onTick={persistRemaining}
+                                    />
+
                                     {/* Flag */}
                                     <div className="flex items-center justify-center">
                                         <div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
@@ -402,6 +494,13 @@ export default function RegionsPage() {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Timeout-Hinweis (Issue #14) */}
+                                    {timedOut && (
+                                        <p className="text-center text-lg font-semibold text-red-400">
+                                            ⏰ Zeit abgelaufen!
+                                        </p>
+                                    )}
 
                                     {/* Answer Buttons */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -6,7 +6,7 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { IconInfinity, IconHeart, IconWorld, IconBrain, IconSwords } from "@tabler/icons-react";
+import { IconInfinity, IconHeart, IconWorld, IconBrain, IconSwords, IconTargetArrow } from "@tabler/icons-react";
 
 interface GameMode {
     title: string;
@@ -44,6 +44,13 @@ const gameModes: GameMode[] = [
         href: "/game/expert",
         icon: <IconBrain className="h-10 w-10" />,
         gradient: "from-purple-500 to-violet-500",
+    },
+    {
+        title: "Fehler trainieren",
+        description: "Übe gezielt deine schwächsten Flaggen",
+        href: "/game/training",
+        icon: <IconTargetArrow className="h-10 w-10" />,
+        gradient: "from-orange-500 to-red-500",
     },
     {
         title: "1v1 Duell",

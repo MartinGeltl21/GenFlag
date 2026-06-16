@@ -7,7 +7,8 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
-import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
+import { saveGameProgress, loadGameProgress, clearGameProgress, GameProgress } from "@/lib/gameProgress";
+import { QuestionTimer, QUESTION_DURATION } from "@/components/game/question-timer";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad } from "@tabler/icons-react";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -30,9 +31,14 @@ export default function GamePage() {
 	const [score, setScore] = useState(0);
 	const [total, setTotal] = useState(0);
 	const [showResumeDialog, setShowResumeDialog] = useState(false);
-	const [savedProgress, setSavedProgress] = useState<{ score: number; total: number } | null>(null);
+	const [savedProgress, setSavedProgress] = useState<GameProgress | null>(null);
+	const [timedOut, setTimedOut] = useState(false);
+	const [questionKey, setQuestionKey] = useState(0);
+	const [resumeRemaining, setResumeRemaining] = useState<number | undefined>(undefined);
 	const flagHistory = useRef(new FlagHistory(40));
 	const hasCheckedProgress = useRef(false);
+	const remainingRef = useRef(QUESTION_DURATION);
+	const lastPersistRef = useRef(QUESTION_DURATION);
 
 	useEffect(() => {
 		const fetchCountries = async () => {
@@ -59,7 +65,7 @@ export default function GamePage() {
 
 			const progress = await loadGameProgress("classic");
 			if (progress && progress.score > 0) {
-				setSavedProgress({ score: progress.score, total: progress.total || progress.score });
+				setSavedProgress(progress);
 				setShowResumeDialog(true);
 				if (progress.flagHistory) {
 					progress.flagHistory.forEach(code => flagHistory.current.addFlag(code));
@@ -125,6 +131,60 @@ export default function GamePage() {
 		setSelectedAnswer(null);
 		setCorrectAnswer(correctGermanName);
 		setIsAnswered(false);
+		setTimedOut(false);
+
+		// Reset the timer (Issue #14) and persist the new question (Issue #15)
+		remainingRef.current = QUESTION_DURATION;
+		lastPersistRef.current = QUESTION_DURATION;
+		setResumeRemaining(undefined);
+		setQuestionKey((k) => k + 1);
+		saveGameProgress("classic", {
+			score,
+			total,
+			flagHistory: flagHistory.current.getHistory(),
+			currentFlag: randomCountry.cca2,
+			options: shuffledOptions,
+			correctAnswer: correctGermanName,
+			remainingTime: QUESTION_DURATION,
+		});
+	};
+
+	// Persist the dwindling timer (throttled) so reloading can't reset it (Issue #15)
+	const persistRemaining = (r: number) => {
+		remainingRef.current = r;
+		if (isAnswered) return;
+		if (lastPersistRef.current - r >= 2) {
+			lastPersistRef.current = r;
+			saveGameProgress("classic", {
+				score,
+				total,
+				flagHistory: flagHistory.current.getHistory(),
+				currentFlag: currentCountry?.cca2,
+				options,
+				correctAnswer: correctAnswer ?? undefined,
+				remainingTime: Math.ceil(r),
+			});
+		}
+	};
+
+	// Timeout counts as a wrong answer (Issue #14)
+	const handleTimeout = () => {
+		if (isAnswered) return;
+		setIsAnswered(true);
+		setSelectedAnswer(null);
+		setTimedOut(true);
+		const newTotal = total + 1;
+		setTotal(newTotal);
+		saveFlagResult(currentCountry?.cca2 || "", false);
+		saveGameProgress("classic", {
+			score,
+			total: newTotal,
+			flagHistory: flagHistory.current.getHistory(),
+			currentFlag: currentCountry?.cca2,
+			options,
+			correctAnswer: correctAnswer ?? undefined,
+			remainingTime: 0,
+		});
 	};
 
 	const handleAnswer = async (answer: string) => {
@@ -161,7 +221,27 @@ export default function GamePage() {
 	const handleResume = () => {
 		if (savedProgress) {
 			setScore(savedProgress.score);
-			setTotal(savedProgress.total);
+			setTotal(savedProgress.total ?? savedProgress.score);
+
+			// Restore the exact flag the player stopped at (Issue #15)
+			const country = savedProgress.currentFlag
+				? countries.find((c) => c.cca2 === savedProgress.currentFlag)
+				: undefined;
+			if (country && savedProgress.options && savedProgress.correctAnswer) {
+				const remaining = savedProgress.remainingTime ?? QUESTION_DURATION;
+				setCurrentCountry(country);
+				setOptions(savedProgress.options);
+				setCorrectAnswer(savedProgress.correctAnswer);
+				setSelectedAnswer(null);
+				setIsAnswered(false);
+				setTimedOut(false);
+				remainingRef.current = remaining;
+				lastPersistRef.current = remaining;
+				setResumeRemaining(remaining);
+				setQuestionKey((k) => k + 1);
+				setShowResumeDialog(false);
+				return;
+			}
 		}
 		setShowResumeDialog(false);
 		loadNewQuestion();
@@ -314,6 +394,15 @@ export default function GamePage() {
 										</div>
 									</div>
 
+									{/* Timer (Issue #14) */}
+									<QuestionTimer
+										resetKey={questionKey}
+										isActive={!isAnswered}
+										startFrom={resumeRemaining}
+										onTimeout={handleTimeout}
+										onTick={persistRemaining}
+									/>
+
 									{/* Flagge in der Mitte - ohne Rand */}
 									<div className="flex items-center justify-center">
 										<div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
@@ -339,6 +428,13 @@ export default function GamePage() {
 											</button>
 										))}
 									</div>
+
+									{/* Timeout-Hinweis (Issue #14) */}
+									{timedOut && (
+										<p className="text-center text-lg font-semibold text-red-400">
+											⏰ Zeit abgelaufen!
+										</p>
+									)}
 
 									{/* Weiter-Button - Platzhalter damit Container nicht wächst */}
 									<div className="flex justify-center mt-6 min-h-[52px]">

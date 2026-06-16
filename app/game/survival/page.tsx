@@ -7,9 +7,10 @@ import { getGermanName } from "@/lib/countryNames";
 import { getSimilarFlags } from "@/lib/similarFlags";
 import { saveFlagResult } from "@/lib/stats";
 import { FlagHistory } from "@/lib/flagHistory";
-import { saveGameProgress, loadGameProgress, clearGameProgress } from "@/lib/gameProgress";
+import { saveGameProgress, loadGameProgress, clearGameProgress, GameProgress } from "@/lib/gameProgress";
+import { QuestionTimer, QUESTION_DURATION } from "@/components/game/question-timer";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconHeart, IconHeartFilled } from "@tabler/icons-react";
+import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconHeart, IconHeartFilled, IconTrophy } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -34,9 +35,14 @@ export default function SurvivalPage() {
     const [rank, setRank] = useState<number | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showResumeDialog, setShowResumeDialog] = useState(false);
-    const [savedProgress, setSavedProgress] = useState<{ score: number; lives: number } | null>(null);
+    const [savedProgress, setSavedProgress] = useState<GameProgress | null>(null);
+    const [timedOut, setTimedOut] = useState(false);
+    const [questionKey, setQuestionKey] = useState(0);
+    const [resumeRemaining, setResumeRemaining] = useState<number | undefined>(undefined);
     const flagHistory = useRef(new FlagHistory(40));
     const hasCheckedProgress = useRef(false);
+    const remainingRef = useRef(QUESTION_DURATION);
+    const lastPersistRef = useRef(QUESTION_DURATION);
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -63,7 +69,7 @@ export default function SurvivalPage() {
 
             const progress = await loadGameProgress("survival");
             if (progress && progress.score > 0 && progress.lives && progress.lives > 0) {
-                setSavedProgress({ score: progress.score, lives: progress.lives });
+                setSavedProgress(progress);
                 setShowResumeDialog(true);
                 if (progress.flagHistory) {
                     progress.flagHistory.forEach(code => flagHistory.current.addFlag(code));
@@ -125,6 +131,66 @@ export default function SurvivalPage() {
         setSelectedAnswer(null);
         setCorrectAnswer(correctGermanName);
         setIsAnswered(false);
+        setTimedOut(false);
+
+        // Reset the timer (Issue #14) and persist the new question (Issue #15)
+        remainingRef.current = QUESTION_DURATION;
+        lastPersistRef.current = QUESTION_DURATION;
+        setResumeRemaining(undefined);
+        setQuestionKey((k) => k + 1);
+        saveGameProgress("survival", {
+            score,
+            lives,
+            flagHistory: flagHistory.current.getHistory(),
+            currentFlag: randomCountry.cca2,
+            options: shuffledOptions,
+            correctAnswer: correctGermanName,
+            remainingTime: QUESTION_DURATION,
+        });
+    };
+
+    // Persist the dwindling timer (throttled) so reloading can't reset it (Issue #15)
+    const persistRemaining = (r: number) => {
+        remainingRef.current = r;
+        if (isAnswered || gameOver) return;
+        if (lastPersistRef.current - r >= 2) {
+            lastPersistRef.current = r;
+            saveGameProgress("survival", {
+                score,
+                lives,
+                flagHistory: flagHistory.current.getHistory(),
+                currentFlag: currentCountry?.cca2,
+                options,
+                correctAnswer: correctAnswer ?? undefined,
+                remainingTime: Math.ceil(r),
+            });
+        }
+    };
+
+    // Timeout costs a life, just like a wrong answer (Issue #14)
+    const handleTimeout = async () => {
+        if (isAnswered || gameOver) return;
+        setIsAnswered(true);
+        setSelectedAnswer(null);
+        setTimedOut(true);
+        saveFlagResult(currentCountry?.cca2 || "", false);
+        const newLives = lives - 1;
+        setLives(newLives);
+        if (newLives <= 0) {
+            setGameOver(true);
+            await clearGameProgress("survival");
+            saveHighscore(score);
+        } else {
+            await saveGameProgress("survival", {
+                score,
+                lives: newLives,
+                flagHistory: flagHistory.current.getHistory(),
+                currentFlag: currentCountry?.cca2,
+                options,
+                correctAnswer: correctAnswer ?? undefined,
+                remainingTime: 0,
+            });
+        }
     };
 
     const handleAnswer = async (answer: string) => {
@@ -200,6 +266,7 @@ export default function SurvivalPage() {
         setScore(0);
         setGameOver(false);
         setRank(null);
+        setTimedOut(false);
         setCurrentCountry(null);
         flagHistory.current.reset();
         clearGameProgress("survival");
@@ -209,7 +276,27 @@ export default function SurvivalPage() {
     const handleResume = () => {
         if (savedProgress) {
             setScore(savedProgress.score);
-            setLives(savedProgress.lives);
+            setLives(savedProgress.lives ?? 3);
+
+            // Restore the exact flag the player stopped at (Issue #15)
+            const country = savedProgress.currentFlag
+                ? countries.find((c) => c.cca2 === savedProgress.currentFlag)
+                : undefined;
+            if (country && savedProgress.options && savedProgress.correctAnswer) {
+                const remaining = savedProgress.remainingTime ?? QUESTION_DURATION;
+                setCurrentCountry(country);
+                setOptions(savedProgress.options);
+                setCorrectAnswer(savedProgress.correctAnswer);
+                setSelectedAnswer(null);
+                setIsAnswered(false);
+                setTimedOut(false);
+                remainingRef.current = remaining;
+                lastPersistRef.current = remaining;
+                setResumeRemaining(remaining);
+                setQuestionKey((k) => k + 1);
+                setShowResumeDialog(false);
+                return;
+            }
         }
         setShowResumeDialog(false);
         loadNewQuestion();
@@ -371,6 +458,13 @@ export default function SurvivalPage() {
                                             Nochmal spielen
                                         </button>
                                         <Link
+                                            href="/highscore?mode=survival"
+                                            className="inline-flex items-center justify-center gap-2 text-white bg-amber-600 hover:bg-amber-700 focus:ring-4 focus:ring-amber-300 font-medium rounded-lg text-lg px-8 py-4 shadow-lg shadow-amber-500/20 transition-all"
+                                        >
+                                            <IconTrophy className="h-5 w-5" />
+                                            Bestenliste
+                                        </Link>
+                                        <Link
                                             href="/game/modes"
                                             className="text-white bg-zinc-700 hover:bg-zinc-600 focus:ring-4 focus:ring-zinc-500 font-medium rounded-lg text-lg px-8 py-4 transition-colors"
                                         >
@@ -410,6 +504,15 @@ export default function SurvivalPage() {
                                         </div>
                                     </div>
 
+                                    {/* Timer (Issue #14) */}
+                                    <QuestionTimer
+                                        resetKey={questionKey}
+                                        isActive={!isAnswered}
+                                        startFrom={resumeRemaining}
+                                        onTimeout={handleTimeout}
+                                        onTick={persistRemaining}
+                                    />
+
                                     {/* Flag */}
                                     <div className="flex items-center justify-center">
                                         <div className="relative w-full max-w-md aspect-[3/2] flex items-center justify-center">
@@ -420,6 +523,13 @@ export default function SurvivalPage() {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Timeout-Hinweis (Issue #14) */}
+                                    {timedOut && (
+                                        <p className="text-center text-lg font-semibold text-red-400">
+                                            ⏰ Zeit abgelaufen! Ein Leben verloren.
+                                        </p>
+                                    )}
 
                                     {/* Answer Buttons */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

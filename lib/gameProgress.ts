@@ -6,6 +6,12 @@ export interface GameProgress {
     lives?: number;
     flagHistory?: string[];
     selectedRegion?: string;
+    // Issue #15: persist the exact question the player stopped at so it can't
+    // be re-rolled by reloading the page.
+    currentFlag?: string;       // cca2 of the currently shown flag
+    options?: string[];         // multiple-choice options (German names); omitted in expert mode
+    correctAnswer?: string;     // German name of the correct answer
+    remainingTime?: number;     // seconds left on the question timer (Issue #14)
     savedAt: string;
 }
 

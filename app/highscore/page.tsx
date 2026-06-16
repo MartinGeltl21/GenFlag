@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { IconHome, IconFlag, IconInfoCircle, IconArrowLeft, IconDeviceGamepad, IconTrophy, IconMedal, IconHeart, IconBrain } from "@tabler/icons-react";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -41,10 +42,12 @@ const sidebarLinks = [
     },
 ];
 
-export default function HighscorePage() {
+function HighscoreContent() {
+    const searchParams = useSearchParams();
+    const initialMode: GameMode = searchParams.get("mode") === "expert" ? "expert" : "survival";
     const [highscores, setHighscores] = useState<HighscoreEntry[]>([]);
     const [loading, setLoading] = useState(true);
-    const [gameMode, setGameMode] = useState<GameMode>("survival");
+    const [gameMode, setGameMode] = useState<GameMode>(initialMode);
 
     useEffect(() => {
         const fetchHighscores = async () => {
@@ -265,5 +268,13 @@ export default function HighscorePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function HighscorePage() {
+    return (
+        <Suspense fallback={<div className="flex min-h-dvh items-center justify-center bg-zinc-950 text-white">Lädt...</div>}>
+            <HighscoreContent />
+        </Suspense>
     );
 }

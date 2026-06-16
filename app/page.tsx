@@ -196,8 +196,16 @@ export default function Home() {
 										<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 									</Link>
 								</Button>
-								<Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-									<Link href="/flaggen">Flaggen durchstöbern</Link>
+								<Button
+									asChild
+									variant="outline"
+									size="lg"
+									className="group/browse w-full border-white/30 bg-white/5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.04] hover:border-white/70 hover:bg-white/20 hover:text-white hover:shadow-[0_0_25px_rgba(255,255,255,0.35)] sm:w-auto"
+								>
+									<Link href="/flaggen">
+										<Globe className="mr-2 h-4 w-4 transition-transform duration-300 group-hover/browse:rotate-12" />
+										Flaggen durchstöbern
+									</Link>
 								</Button>
 							</motion.div>
 
