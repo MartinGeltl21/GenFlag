@@ -1,5 +1,18 @@
-GenFlag Features:
+Passwort vergessen Option in der Anmeldemaske
 
-Sprache der Flaggen änderbar
+Alle englischen Flaggennamen auf die deutschen Namen updaten
 
-Multiplayer
+Manche Flaggen sehen 1:1 gleich aus, so wie Frankreich und Saint-Martin. Es soll bei den Antwortmöglichkeiten
+nicht möglich sein, dass beide dieser Auswahlen vorkommen, da es sonst Glücksspiel ist, welche korrekt ist.
+
+Beim Expertenmodus sollen alle Antwortmöglichkeiten, die es sein könnten, korrekt sein. Also sowohl Frankreich,
+als auch Saint-Martin. Also alle die 1:1 gleich aussehen sind korrekte Antworten.
+
+Eine Flagge die grade dran war, darf erst wieder in mindestens 40 weiteren Flaggen erneut vorkommen.
+
+Beim Expertenmodus soll man direkt beim ersten Fehler scheitern. Dann haben wir die Problematik mit rot grün und dem
+überspringen der Flaggen gelöst und für den Highscore macht es auch mehr Sinn
+
+
+Buttons auf Startseite aktualisieren
+Google Login ermöglichen
